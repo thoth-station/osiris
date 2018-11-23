@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from osiris.response import APIResponse
 from osiris.response import request_accepted
+from osiris.utils import format_status_message
 
 
 def patch_jsonify(response_dict: dict) -> dict:
@@ -31,8 +32,8 @@ class TestResponse(TestCase):
             response.pop('version'), str
         )
         self.assertEqual(
-            response.pop('status'),
-            APIResponse.format_status_message(expected_status)
+            response.pop('status')['code'],
+            expected_status.value
         )
         self.assertFalse(response)
 
