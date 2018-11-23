@@ -4,7 +4,7 @@ __all__ = [
 ]
 
 __title__ = "osiris"
-__summary__ = "Build log aggregator."
+__summary__ = "Build log aggregation and analysis."
 __uri__ = ""
 
 __version__ = "0.0.1"

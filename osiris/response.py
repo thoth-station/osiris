@@ -17,33 +17,21 @@ class APIResponse:
     with default keys common to all responses.
     """
 
-    __BASE_RESPONSE = {
-        'name': "Build log aggregator.",
-        'version': ABOUT['__version__'],
-    }
-
     def __init__(self, status: HTTPStatus = HTTPStatus.ACCEPTED):
         self._status = status
 
     def __call__(self, fun: typing.Callable[..., dict] = None):
 
         def wrapper(*args, **kwargs) -> typing.Tuple[dict, HTTPStatus]:
-            response: dict = self.__BASE_RESPONSE.copy()
-            response.update({
-                'status': f"{self._status}, {self._status.phrase}"
-            })
+            response = {
+                'status': self._status
+            }
 
             response.update(fun(*args, **kwargs))
 
-            return jsonify(response), self._status
+            return response, self._status
 
         return wrapper
-
-    @staticmethod
-    def format_status_message(status: HTTPStatus):
-        """Return formated status message."""
-        return f"{status}, {status.phrase}"
-
 
 # Syntactic sugar for some of common payloads follows
 
@@ -51,6 +39,12 @@ class APIResponse:
 @APIResponse(HTTPStatus.ACCEPTED)
 def request_accepted() -> dict:
     """API response for accepted request."""
+    return {}
+
+
+@APIResponse(HTTPStatus.CREATED)
+def request_created() -> dict:
+    """API response for created request."""
     return {}
 
 
