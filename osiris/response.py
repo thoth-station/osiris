@@ -4,72 +4,71 @@
 
 import typing
 
-from flask import jsonify
 from http import HTTPStatus
+from osiris.schema.base import Base, BaseSchema
 
-from osiris import ABOUT
+
+__schema__ = BaseSchema()
 
 
-class APIResponse:
+def status(http_status: HTTPStatus):
     """API response wrapper.
 
     This decorator can be used to assemble custom payloads
     with default keys common to all responses.
     """
 
-    def __init__(self, status: HTTPStatus = HTTPStatus.ACCEPTED):
-        self._status = status
+    def wrapper(fun: typing.Callable[..., dict] = None):
 
-    def __call__(self, fun: typing.Callable[..., dict] = None):
+        def inner(*args, **kwargs) -> typing.Tuple[dict, HTTPStatus]:
+            base = Base(http_status)
 
-        def wrapper(*args, **kwargs) -> typing.Tuple[dict, HTTPStatus]:
-            response = {
-                'status': self._status
-            }
+            response = __schema__.dump(base)
+            response.data.update(fun(*args, **kwargs))
 
-            response.update(fun(*args, **kwargs))
+            return response.data, http_status.value
 
-            return response, self._status
+        return inner
 
-        return wrapper
+    return wrapper
 
 # Syntactic sugar for some of common payloads follows
 
 
-@APIResponse(HTTPStatus.ACCEPTED)
-def request_accepted() -> dict:
+@status(HTTPStatus.ACCEPTED)
+def request_accepted(**kwargs) -> dict:
     """API response for accepted request."""
-    return {}
+    return kwargs
 
 
-@APIResponse(HTTPStatus.CREATED)
-def request_created() -> dict:
+@status(HTTPStatus.CREATED)
+def request_created(**kwargs) -> dict:
     """API response for created request."""
-    return {}
+    return kwargs
 
 
-@APIResponse(HTTPStatus.UNAUTHORIZED)
-def request_unauthorized() -> dict:  # pragma: no cover
+@status(HTTPStatus.UNAUTHORIZED)
+def request_unauthorized(**kwargs) -> dict:  # pragma: no cover
     """API response for unauthorized request."""
-    return {}
+    return kwargs
 
 
-@APIResponse(HTTPStatus.FORBIDDEN)
-def request_forbidden() -> dict:  # pragma: no cover
+@status(HTTPStatus.FORBIDDEN)
+def request_forbidden(**kwargs) -> dict:  # pragma: no cover
     """API response for forbidden request."""
-    return {}
+    return kwargs
 
 
-@APIResponse(HTTPStatus.BAD_REQUEST)
-def bad_request() -> dict:  # pragma: no cover
+@status(HTTPStatus.BAD_REQUEST)
+def bad_request(**kwargs) -> dict:  # pragma: no cover
     """API response for bad request."""
-    return {}
+    return kwargs
 
 
-@APIResponse(HTTPStatus.OK)
-def status_ok() -> dict:  # pragma: no cover
+@status(HTTPStatus.OK)
+def request_ok(**kwargs) -> dict:  # pragma: no cover
     """API response for status OK.
 
     NOTE: Used in probes.
     """
-    return {}
+    return kwargs

@@ -1,6 +1,7 @@
 {
   "test_response.py::TestResponse::test_custom_status": true,
   "test_response.py::TestResponse::test_default_response": true,
+  "test_response.py::TestResponse::test_request_accepted": true,
   "test_response.py::TestResponse::test_request_unauthorized": true,
   "test_response.py::TestResponse::test_status_response": true
 }

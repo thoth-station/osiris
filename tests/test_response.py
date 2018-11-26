@@ -4,9 +4,7 @@ from http import HTTPStatus
 from unittest import TestCase
 from unittest.mock import patch
 
-from osiris.response import APIResponse
 from osiris.response import request_accepted
-from osiris.utils import format_status_message
 
 
 def patch_jsonify(response_dict: dict) -> dict:
