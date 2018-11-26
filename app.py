@@ -10,8 +10,16 @@ from flask_restplus import Resource
 
 from osiris.apis import api
 
+from osiris.apis.auth import api as auth_namespace
+from osiris.apis.build import api as build_namespace
+from osiris.apis.probes import api as probes_namespace
 
 app = Flask(__name__)
+
+api.add_namespace(build_namespace)
+api.add_namespace(probes_namespace)
+api.add_namespace(auth_namespace)
+
 api.init_app(app)
 
 
