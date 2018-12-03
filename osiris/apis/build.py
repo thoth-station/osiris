@@ -4,9 +4,6 @@
 
 from http import HTTPStatus
 
-import shlex
-import subprocess
-
 from flask import request
 
 from flask_restplus import fields
@@ -15,13 +12,15 @@ from flask_restplus import Resource
 
 from osiris import DEFAULT_OC_LOG_LEVEL
 
+from osiris.aggregator import curl_build_log
+from osiris.aggregator import store_build_log
+
 from osiris.apis.model import response
 
-from osiris.response import bad_request
 from osiris.response import request_accepted
 from osiris.response import request_ok
 
-from osiris.schema.build import BuildInfoSchema
+from osiris.schema.build import BuildInfo, BuildInfoSchema
 
 api = Namespace(name='build', description="Namespace for build triggers.")
 
@@ -57,7 +56,7 @@ build_response = api.inherit('build_response', response, {
 
 @api.route('/status/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildStatus(Resource):
+class BuildStatusResource(Resource):
     """Build status endpoint."""
 
     # noinspection PyMethodMayBeStatic
@@ -68,7 +67,7 @@ class BuildStatus(Resource):
 
 @api.route('/info/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildInfo(Resource):
+class BuildInfoResource(Resource):
     """Build information endpoint."""
 
     # noinspection PyMethodMayBeStatic
@@ -83,10 +82,14 @@ class BuildInfo(Resource):
 
 @api.route('/logs/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildLog(Resource):
+class BuildLogResource(Resource):
     """Build log endpoint."""
 
     # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.OK,
+                  description="Retrieve stored information about build "
+                              "specified by unique build id.",
+                  model=build_response)
     @api.doc(responses={
         s.value: s.description for s in [
             HTTPStatus.OK,
@@ -96,33 +99,19 @@ class BuildLog(Resource):
         """Return logs stored by the given build."""
 
         # optionally provided via url argument
-        log_level = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
+        log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
 
-        log_command = shlex.split(
-            f"oc logs {build_id} --loglevel {log_level}"
-        )
-
-        proc = subprocess.Popen(log_command,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-
-        out, err = proc.communicate()
-        ret_code = proc.wait()
-
-        if ret_code > 0:
-            return bad_request(  # TODO: Correct response w.r.t ret_code
-                output=err.decode('utf-8') or None,
-                errors=err.decode('utf-8') or None
-            )
+        # TODO: replace with Ceph query
+        build_log: str = curl_build_log(build_id, log_level)
 
         return request_ok(
-            payload={'build_log': out.decode('utf-8')}
+            payload={'build_log': build_log}
         )
 
 
 @api.route('/init/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildInitiated(Resource):
+class BuildInitiatedResource(Resource):
     """Receiver hook for initiated builds."""
 
     # noinspection PyMethodMayBeStatic
@@ -133,7 +122,7 @@ class BuildInitiated(Resource):
 
 @api.route('/start/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildStarted(Resource):
+class BuildStartedResource(Resource):
     """Receiver hook for started builds."""
 
     # noinspection PyMethodMayBeStatic
@@ -144,7 +133,7 @@ class BuildStarted(Resource):
 
 @api.route('/finish/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
-class BuildCompleted(Resource):
+class BuildCompletedResource(Resource):
     """Receiver hook for completed builds.
 
     When the build is marked completed and this endpoint
@@ -160,4 +149,25 @@ class BuildCompleted(Resource):
     # noinspection PyMethodMayBeStatic
     def put(self, build_id):  # pragma: no cover
         """Trigger build completion hook."""
+
+        log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
+
+        # TODO: run all of the following ops asynchronously
+
+        # get build log
+        build_log: str = curl_build_log(build_id, log_level)
+
+        # TODO: get all additional information according to BuildInfoSchema
+        build_info = BuildInfo(
+            build_id, build_status='COMPLETED'
+        )
+
+        build_schema = BuildInfoSchema()
+
+        build_doc = build_schema.dump(build_info)
+        build_doc.data['build_log'] = build_log
+
+        # store in Ceph
+        _ = store_build_log(build_doc.data)
+
         return request_accepted()

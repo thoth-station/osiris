@@ -10,12 +10,13 @@ from flask_restplus import Resource
 
 from osiris.apis.model import response
 
-from osiris.response import bad_request
 from osiris.response import request_accepted
 from osiris.response import request_ok
 from osiris.response import request_unauthorized
 
 from osiris.schema.auth import LoginSchema
+
+from osiris.exceptions import OCError
 
 from osiris.utils import execute_command
 
@@ -58,7 +59,7 @@ login_request = api.model('login_request', {
 
 
 @api.route("/status")
-class LoginStatus(Resource):
+class LoginStatusResource(Resource):
     """Authorization endpoint."""
 
     @api.doc(responses={
@@ -81,7 +82,7 @@ class LoginStatus(Resource):
 
 
 @api.route("/login")
-class Login(Resource):
+class LoginResource(Resource):
 
     @api.marshal_with(login_response,
                       code=HTTPStatus.ACCEPTED,
@@ -97,7 +98,10 @@ class Login(Resource):
         body=login_request
     )
     def post(self):
-        """Authorize current session."""
+        """Authorize current session.
+
+        :raises OCError: In case of OC CLI failure.
+        """
         schema = LoginSchema()
         login = schema.load(api.payload).data
 
@@ -106,10 +110,7 @@ class Login(Resource):
         out, err, ret_code = execute_command(login_command)
 
         if ret_code > 0:
-            return bad_request(
-                output=out.decode('utf-8') or None,
-                errors=err.decode('utf-8') or None
-            )
+            raise OCError(ret_code, payload=err.decode('utf-8'))
 
         # update user information
 
