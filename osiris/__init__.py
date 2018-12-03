@@ -11,6 +11,6 @@ with open(__about__.__file__) as f:
     exec(f.read(), ABOUT)
 
 
-# Environment
+# Environment variables
 
 DEFAULT_OC_LOG_LEVEL = os.getenv('OC_LOG_LEVEL', 10)

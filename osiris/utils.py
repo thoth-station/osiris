@@ -21,7 +21,10 @@ def execute_command(command: str) -> tuple:
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
 
-    out, err = proc.communicate()
-    ret_code = proc.wait()
+    out: bytes
+    err: bytes
 
-    return (out, err), ret_code
+    out, err = proc.communicate()
+    ret_code: int = proc.wait()
+
+    return out, err, ret_code
