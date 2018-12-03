@@ -2,31 +2,43 @@
 
 """Namespace: auth"""
 
-import shlex
-import subprocess
-
 from http import HTTPStatus
 
 from flask_restplus import fields
 from flask_restplus import Namespace
 from flask_restplus import Resource
 
-from osiris.apis.models import response
+from osiris.apis.model import response
 
-from osiris.response import request_ok
 from osiris.response import bad_request
 from osiris.response import request_accepted
+from osiris.response import request_ok
 from osiris.response import request_unauthorized
 
 from osiris.schema.auth import LoginSchema
+
+from osiris.utils import execute_command
 
 
 api = Namespace(name='auth',
                 description="Namespace for API authorization.",
                 validate=True)
 
+login_fields = api.model('login_fieds', {
+    'server': fields.String(
+        required=True,
+        description="Server the user is currently logged into.",
+        example="<host>:<port>"
+    ),
+    'user': fields.String(
+        required=True,
+        description="Current user.",
+        example="<username>"
+    ),
+})
+
 login_response = api.inherit('login_response', response, {
-    'user': fields.String
+    'payload': fields.Nested(login_fields)
 })
 
 
@@ -34,8 +46,9 @@ login_request = api.model('login_request', {
     'server': fields.String(
         required=True,
         description="Server to log into.",
-        example="<host>:<port>"
+        example="<host>"
     ),
+    # TODO: can it do any harm to return the token?
     'token': fields.String(
         required=True,
         description="Session or service token.",
@@ -59,7 +72,9 @@ class LoginStatus(Resource):
         logged_in = True  # TODO: Get current login status
 
         if logged_in:
-            return request_ok(login_status='AUTHENTICATED')
+            return request_ok(payload={
+                'login_status': 'AUTHENTICATED'
+            })
 
         else:
             return request_unauthorized()
@@ -84,19 +99,11 @@ class Login(Resource):
     def post(self):
         """Authorize current session."""
         schema = LoginSchema()
-        user = schema.load(api.payload)
-        user_data = user.data
+        login = schema.load(api.payload).data
 
-        login_command = shlex.split(
-            f"oc login {user_data.server} --token {user_data.token}"
-        )
+        login_command = f"oc login {login.server} --token {login.token}"
 
-        proc = subprocess.Popen(login_command,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-
-        out, err = proc.communicate()
-        ret_code = proc.wait()
+        out, err, ret_code = execute_command(login_command)
 
         if ret_code > 0:
             return bad_request(
@@ -104,7 +111,16 @@ class Login(Resource):
                 errors=err.decode('utf-8') or None
             )
 
+        # update user information
+
+        user_data, _, ret_code = execute_command(f"oc whoami -c")
+        server, user = user_data.split('/')
+
+        login.server = server
+        login.user = user
+
         return request_accepted(
-            output=out.decode('utf-8') or None,
+            output=out.decode('utf-8'),  # TODO: response following given schema
+            payload=schema.dump(login)
         )
 

@@ -37,31 +37,46 @@ def status(http_status: HTTPStatus):
 
 @status(HTTPStatus.ACCEPTED)
 def request_accepted(**kwargs) -> dict:
-    """API response for accepted request."""
+    """API response for accepted request.
+
+    Request accepted, processing continues off-line.
+    """
     return kwargs
 
 
 @status(HTTPStatus.CREATED)
 def request_created(**kwargs) -> dict:
-    """API response for created request."""
+    """API response for created request.
+
+    Document created, URL follows.
+    """
     return kwargs
 
 
 @status(HTTPStatus.UNAUTHORIZED)
 def request_unauthorized(**kwargs) -> dict:  # pragma: no cover
-    """API response for unauthorized request."""
+    """API response for unauthorized request.
+
+    No permission -- see authorization schemes.
+    """
     return kwargs
 
 
 @status(HTTPStatus.FORBIDDEN)
 def request_forbidden(**kwargs) -> dict:  # pragma: no cover
-    """API response for forbidden request."""
+    """API response for forbidden request.
+
+    Request forbidden -- authorization will not help.
+    """
     return kwargs
 
 
 @status(HTTPStatus.BAD_REQUEST)
 def bad_request(**kwargs) -> dict:  # pragma: no cover
-    """API response for bad request."""
+    """API response for bad request.
+
+    Bad request syntax or unsupported method.
+    """
     return kwargs
 
 
@@ -69,6 +84,6 @@ def bad_request(**kwargs) -> dict:  # pragma: no cover
 def request_ok(**kwargs) -> dict:  # pragma: no cover
     """API response for status OK.
 
-    NOTE: Used in probes.
+    Request fulfilled, document follows.
     """
     return kwargs
