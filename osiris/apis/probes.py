@@ -8,7 +8,7 @@ from flask_restplus import Namespace
 from flask_restplus import Resource
 
 from osiris.response import request_ok
-from osiris.apis.models import response
+from osiris.apis.model import response
 
 api = Namespace(name='probes', description="Namespace for API health checks.")
 
