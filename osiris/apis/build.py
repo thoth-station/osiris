@@ -14,6 +14,7 @@ from osiris import DEFAULT_OC_LOG_LEVEL
 
 from osiris.aggregator import curl_build_log
 from osiris.aggregator import store_build_log
+from osiris.aggregator import retrieve_build_log
 
 from osiris.apis.model import response
 
@@ -98,14 +99,10 @@ class BuildLogResource(Resource):
     def get(self, build_id):
         """Return logs stored by the given build."""
 
-        # optionally provided via url argument
-        log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
-
-        # TODO: replace with Ceph query
-        build_log: str = curl_build_log(build_id, log_level)
+        build_doc: dict = retrieve_build_log(build_id)
 
         return request_ok(
-            payload={'build_log': build_log}
+            payload=build_doc
         )
 
 
@@ -113,6 +110,11 @@ class BuildLogResource(Resource):
 @api.param('build_id', 'Unique build identification.')
 class BuildInitiatedResource(Resource):
     """Receiver hook for initiated builds."""
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, build_id):
+        """Check whether given build has been initiated."""
+        return request_ok()
 
     # noinspection PyMethodMayBeStatic
     def put(self, build_id):  # pragma: no cover
@@ -124,6 +126,11 @@ class BuildInitiatedResource(Resource):
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedResource(Resource):
     """Receiver hook for started builds."""
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, build_id):
+        """Check whether given build has started."""
+        return request_ok()
 
     # noinspection PyMethodMayBeStatic
     def put(self, build_id):  # pragma: no cover

@@ -12,7 +12,6 @@ from osiris.apis.model import response
 
 from osiris.response import request_accepted
 from osiris.response import request_ok
-from osiris.response import request_unauthorized
 
 from osiris.schema.auth import LoginSchema
 
@@ -65,20 +64,17 @@ class LoginStatusResource(Resource):
     @api.doc(responses={
         s.value: s.description for s in [
             HTTPStatus.OK,
-            HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED
         ]})
     def get(self):
         """Check whether current session is authorized."""
 
-        logged_in = True  # TODO: Get current login status
+        _, err, ret_code = execute_command("oc whoami")
 
-        if logged_in:
-            return request_ok(payload={
-                'login_status': 'AUTHENTICATED'
-            })
+        login_status = 'NOT AUTHENTICATED' if ret_code > 0 else 'AUTHENTICATED'
 
-        else:
-            return request_unauthorized()
+        return request_ok(payload={
+            'login_status': login_status
+        })
 
 
 @api.route("/login")

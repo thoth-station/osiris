@@ -15,6 +15,7 @@ from osiris.apis.build import api as build_namespace
 from osiris.apis.probes import api as probes_namespace
 
 from osiris.exceptions import OCError
+from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
 
@@ -29,12 +30,13 @@ api.init_app(app)
 
 
 @app.errorhandler(OCError)
-def handle_oc_error(error):  # FIXME: The error does not seem to be registered
+@app.errorhandler(OCAuthenticationError)
+def handle_oc_error(error: OCError):  # FIXME: The error does not seem to be registered
     """Handle exceptions caused by OC CLI."""
-    error_response = jsonify(error.to_dict())
+    error_dct = error.to_dict()
+    error_response = error.response or bad_request
 
-    # TODO: customize response status w.r.t return code
-    return bad_request(error=error_response)
+    return jsonify(error_response(error=error_dct))
 
 
 # Namespace: default

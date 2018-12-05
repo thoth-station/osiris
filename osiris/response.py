@@ -54,10 +54,20 @@ def request_created(**kwargs) -> dict:
 
 
 @status(HTTPStatus.UNAUTHORIZED)
-def request_unauthorized(**kwargs) -> dict:  # pragma: no cover
+def request_not_authorized(**kwargs) -> dict:  # pragma: no cover
     """API response for unauthorized request.
 
     No permission -- see authorization schemes.
+    """
+    return kwargs
+
+
+@status(HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED)
+def request_not_authenticated(**kwargs) -> dict:  # pragma: no cover
+    """API response for unauthenticated request.
+
+    Network Authentication Required,
+    The client needs to authenticate to gain network access
     """
     return kwargs
 
