@@ -13,6 +13,19 @@ from osiris.utils import format_status_message
 
 # Model: Status
 
+class AppData(object):
+
+    def __init__(self):
+        self.name = ABOUT['__title__']
+        self.version = ABOUT['__version__']
+
+
+class AppDataSchema(Schema):
+
+    name = fields.String(required=True)
+    version = fields.String(required=True)
+
+
 class Status(object):
 
     def __init__(self, status: HTTPStatus):
@@ -24,7 +37,7 @@ class Status(object):
 
 class StatusSchema(Schema):
 
-    code = fields.Integer()
+    code = fields.Integer(required=True)
     phrase = fields.String()
     description = fields.String()
     message = fields.String()
@@ -35,15 +48,17 @@ class StatusSchema(Schema):
 class Base(object):
 
     def __init__(self, status: HTTPStatus):
-        self.name = ABOUT['__title__']
-        self.version = ABOUT['__version__']
 
+        self.app_data = AppData()
         self.status = Status(status)
+
+        self.payload = None
+        self.errors = None
 
 
 class BaseSchema(Schema):
 
-    name = fields.String()
-    version = fields.String()
-
+    app_data = fields.Nested(AppDataSchema)
     status = fields.Nested(StatusSchema)
+
+    payload = fields.Raw()
