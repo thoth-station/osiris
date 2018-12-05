@@ -7,7 +7,11 @@ from http import HTTPStatus
 from flask_restplus import Namespace
 from flask_restplus import Resource
 
+from osiris.aggregator import build_store
+
 from osiris.response import request_ok
+from osiris.response import request_unavailable
+
 from osiris.apis.model import response
 
 api = Namespace(name='probes', description="Namespace for API health checks.")
@@ -36,10 +40,15 @@ class Readiness(Resource):
     @api.doc(responses={
         s.value: s.description for s in [
             HTTPStatus.OK,
-            HTTPStatus.FORBIDDEN,
-            HTTPStatus.UNAUTHORIZED
+            # HTTPStatus.FORBIDDEN,
+            # HTTPStatus.UNAUTHORIZED
         ]})
     def get(self):  # pragma: no cover
         """Readiness check."""
-        # TODO: check Ceph, for now return accepted
-        return request_ok()
+        if build_store.is_connected():
+
+            return request_ok()
+        # TODO: what else should be checked? Check auth as well?
+        else:
+
+            return request_unavailable()

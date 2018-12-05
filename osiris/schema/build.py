@@ -10,16 +10,11 @@ from osiris import DEFAULT_OC_LOG_LEVEL
 from osiris.schema.ocp import OCP, OCPSchema
 
 
-# @proto
-# class BuildLog(object):
-#
-#     def __init__(self, url: str):
-#
-#         self.url = url
-#
-#     def curl(self) -> str:
-#
-#         pass
+class BuildLog(object):
+
+    def __init__(self, raw: str):
+
+        self.data = raw
 
 
 class BuildInfo(object):

@@ -15,13 +15,16 @@ status = Model('status', {
 })
 
 
-response = Model('response', {
+app_data = Model('app_data', {
     'name': fields.String,
     'version': fields.String,
-    'status': fields.Nested(status),
+})
 
-    'output': fields.Raw,
+
+response = Model('response', {
+    'app_data': fields.Nested(app_data, attribute='data.app_data'),
+    'status': fields.Nested(status, attribute='data.status'),
+
+    'payload': fields.Raw(attribute='data.payload'),
     'errors': fields.Raw,
-
-    'payload': fields.Raw,
 })

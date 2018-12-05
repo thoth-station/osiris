@@ -4,6 +4,8 @@
 
 import hashlib
 
+from typing import Tuple, Union
+
 from thoth.storages import BuildLogsStore
 
 from osiris import DEFAULT_OC_LOG_LEVEL
@@ -12,10 +14,13 @@ from osiris.exceptions import OCError
 from osiris.exceptions import OCAuthenticationError
 from osiris.utils import execute_command
 
+from osiris.schema.build import BuildLog
+from osiris.schema.build import BuildInfo
+
 # TODO: logging
 
-ceph_store = BuildLogsStore()
-ceph_store.connect()
+build_store = BuildLogsStore()
+build_store.connect()
 
 
 def curl_build_log(build_id: str, log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
@@ -44,19 +49,31 @@ def curl_build_log(build_id: str, log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
 def store_build_log(build_doc: dict) -> str:
     """Store the build log document in Ceph."""
     # TODO: logging
-    blob = ceph_store.ceph.dict2blob(build_doc)
+    blob = build_store.ceph.dict2blob(build_doc)
     build_id: str = build_doc['build_id']
 
     document_id: str = hashlib.sha256(build_id.encode('utf-8')).hexdigest()
 
-    ceph_store.ceph.store_blob(blob, document_id)
+    build_store.ceph.store_blob(blob, document_id)
 
     return document_id
 
 
-def retrieve_build_log(build_id: str) -> dict:
+def retrieve_build_log(build_id: str,
+                       log_only=False) -> Union[Tuple[BuildLog, ],
+                                                Tuple[BuildLog, BuildInfo]]:
     """Retrieve build log document from Ceph by its id."""
     # TODO: logging
     document_id: str = hashlib.sha256(build_id.encode('utf-8')).hexdigest()
 
-    return ceph_store.retrieve_document(document_id)
+    build_doc: dict = build_store.retrieve_document(document_id)
+    build_log = BuildLog(raw=build_doc.pop('build_log'))
+
+    ret: tuple = (build_log, )
+
+    if not log_only:
+        build_info = BuildInfo(**build_doc)
+
+        ret = build_log, build_info
+
+    return ret

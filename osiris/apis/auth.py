@@ -26,14 +26,20 @@ api = Namespace(name='auth',
 
 login_fields = api.model('login_fieds', {
     'server': fields.String(
-        required=True,
+        required=False,
         description="Server the user is currently logged into.",
         example="<host>:<port>"
     ),
     'user': fields.String(
-        required=True,
+        required=False,
         description="Current user.",
         example="<username>"
+    ),
+    'login_status': fields.String(
+        required=True,
+        description="Login status."
+                    "One of [AUTHENTICATED, NOT AUTHENTICATED]",
+        example="AUTHENTICATED"
     ),
 })
 
@@ -48,7 +54,6 @@ login_request = api.model('login_request', {
         description="Server to log into.",
         example="<host>"
     ),
-    # TODO: can it do any harm to return the token?
     'token': fields.String(
         required=True,
         description="Session or service token.",
@@ -61,6 +66,7 @@ login_request = api.model('login_request', {
 class LoginStatusResource(Resource):
     """Authorization endpoint."""
 
+    @api.marshal_with(login_response)
     @api.doc(responses={
         s.value: s.description for s in [
             HTTPStatus.OK,
@@ -68,13 +74,26 @@ class LoginStatusResource(Resource):
     def get(self):
         """Check whether current session is authorized."""
 
-        _, err, ret_code = execute_command("oc whoami")
+        out: bytes
+        out, _, ret_code = execute_command("oc whoami --show-context")
 
         login_status = 'NOT AUTHENTICATED' if ret_code > 0 else 'AUTHENTICATED'
 
-        return request_ok(payload={
+        server: str
+        user: str
+
+        try:
+            server, user = out.decode('utf-8').strip().rsplit('/', 1)
+        except ValueError:
+            pass
+
+        payload = {
+            'server': server,
+            'user': user,
             'login_status': login_status
-        })
+        }
+
+        return request_ok(payload=payload)
 
 
 @api.route("/login")
@@ -117,7 +136,7 @@ class LoginResource(Resource):
         login.user = user
 
         return request_accepted(
-            output=out.decode('utf-8'),  # TODO: response following given schema
-            payload=schema.dump(login)
+            payload=schema.dump(login),
+            output=out.decode('utf-8')
         )
 
