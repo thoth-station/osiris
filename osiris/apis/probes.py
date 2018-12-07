@@ -7,7 +7,7 @@ from http import HTTPStatus
 from flask_restplus import Namespace
 from flask_restplus import Resource
 
-from osiris.aggregator import build_store
+from osiris.aggregator import build_aggregator
 
 from osiris.response import request_ok
 from osiris.response import request_unavailable
@@ -45,7 +45,7 @@ class Readiness(Resource):
         ]})
     def get(self):  # pragma: no cover
         """Readiness check."""
-        if build_store.is_connected():
+        if build_aggregator.is_connected():
 
             return request_ok()
         # TODO: what else should be checked? Check auth as well?

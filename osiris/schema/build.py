@@ -2,6 +2,8 @@
 
 """Build API schema."""
 
+from typing import List
+
 from marshmallow import fields
 from marshmallow import post_load
 from marshmallow import Schema
@@ -53,3 +55,29 @@ class BuildInfoSchema(Schema):
     @post_load
     def make_build_info(self, data: dict) -> BuildInfo:
         return BuildInfo(**data)
+
+
+class BuildInfoPagination(object):
+
+    RESULTS_PER_PAGE = 20
+
+    def __init__(self,
+                 build_info_list: List[BuildInfo],
+                 total: int = None,
+                 has_next: bool = None,
+                 has_prev: bool = None):
+
+        self.build_info = build_info_list
+
+        self.total = total
+        self.has_next = has_next
+        self.has_prev = has_prev
+
+
+class BuildInfoPaginationSchema(Schema):
+
+    build_info = fields.List(fields.Nested(BuildInfoSchema))
+
+    total = fields.Integer(required=True)
+    has_next = fields.Bool(required=False)
+    has_prev = fields.Bool(required=False)
