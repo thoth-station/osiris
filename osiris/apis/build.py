@@ -12,9 +12,7 @@ from flask_restplus import Resource
 
 from osiris import DEFAULT_OC_LOG_LEVEL
 
-from osiris.aggregator import curl_build_log
-from osiris.aggregator import store_build_log
-from osiris.aggregator import retrieve_build_log
+from osiris.aggregator import build_aggregator
 
 from osiris.apis.model import response
 
@@ -22,8 +20,11 @@ from osiris.response import request_accepted
 from osiris.response import request_ok
 
 from osiris.schema.build import BuildInfo, BuildInfoSchema
+from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
+
 
 api = Namespace(name='build', description="Namespace for build triggers.")
+
 
 build_fields = api.model('build_fields', {
     'build_id': fields.String(
@@ -66,7 +67,7 @@ class BuildStatusResource(Resource):
     def get(self, build_id):
         """Return status of the given build."""
 
-        _, build_info = retrieve_build_log(build_id)
+        _, build_info = build_aggregator.retrieve_build_log(build_id)
 
         return request_ok(payload={
             'build_status': build_info.build_status
@@ -90,9 +91,27 @@ class BuildInfoResource(Resource):
         """Return complete information stored about given build."""
 
         schema = BuildInfoSchema()
-        _, build_info = retrieve_build_log(build_id)
+        _, build_info = build_aggregator.retrieve_build_log(build_id)
 
         return request_ok(payload=schema.dump(build_info))
+
+
+@api.route('/info/page', defaults={'page': 1})
+@api.route('/info/page/<int:page>')
+class BuildInfoListingResource(Resource):
+    """Build information endpoint."""
+
+    # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.OK,
+                  description="Paginate build information documents."
+                  )
+    def get(self, page):
+        """Paginate build information documents stored in Ceph."""
+
+        schema = BuildInfoPaginationSchema()
+        page: BuildInfoPagination = build_aggregator.paginate_build_info(page)
+
+        return request_ok(payload=schema.dump(page))
 
 
 # logs
@@ -116,7 +135,7 @@ class BuildLogResource(Resource):
     def get(self, build_id):
         """Return logs stored by the given build."""
 
-        build_log, = retrieve_build_log(build_id, log_only=True)
+        build_log, = build_aggregator.retrieve_build_log(build_id, log_only=True)
 
         # FIXME: return the whole doc or just the build log?
         return request_ok(
@@ -167,7 +186,7 @@ class BuildCompletedResource(Resource):
         # TODO: run all of the following ops asynchronously
 
         # get build log
-        build_log: str = curl_build_log(build_id, log_level)
+        build_log: str = build_aggregator.curl_build_log(build_id, log_level)
 
         # TODO: get all additional information according to BuildInfoSchema
         build_info = BuildInfo(
@@ -180,6 +199,6 @@ class BuildCompletedResource(Resource):
         build_doc.data['build_log'] = build_log
 
         # store in Ceph
-        _ = store_build_log(build_doc.data)
+        _ = build_aggregator.store_build_log(build_doc.data)
 
         return request_accepted()
