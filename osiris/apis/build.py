@@ -18,6 +18,7 @@ from osiris.apis.model import response
 
 from osiris.response import request_accepted
 from osiris.response import request_ok
+from osiris.response import bad_request
 
 from osiris.schema.build import BuildInfo, BuildInfoSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
@@ -32,21 +33,21 @@ build_fields = api.model('build_fields', {
         description="Unique build identification.",
         example="user-api-42-build"
     ),
-    'build_url': fields.Url(
-        required=False,
-        description="URL to the OCP pod.",
-    ),
     'build_status': fields.String(
         required=True,
         description="Status of the build.",
-        example="COMPLETED"
+        example="BuildStarted"
+    ),
+    'build_url': fields.Url(
+        required=False,
+        description="URL to the OCP pod.",
     ),
     'build_log_url': fields.Url(
         required=False,
         description="URL to build logs.",
     ),
     'ocp_info': fields.Raw(
-        required=True,
+        required=False,
         description="OCP build-related information.",
     ),
 })
@@ -145,34 +146,49 @@ class BuildLogResource(Resource):
 
 # triggers
 
+@api.route('/start', defaults={'build_id': None})
 @api.route('/start/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedResource(Resource):
     """Receiver hook for started builds."""
 
     # noinspection PyMethodMayBeStatic
-    def put(self, build_id):  # pragma: no cover
+    @api.expect(build_fields)
+    def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build start hook."""
 
         # TODO: run all of the following ops asynchronously
-        # TODO: read build info from body
         # TODO: get all additional information according to BuildInfoSchema
-        build_info = BuildInfo(
-            build_id, build_status='BuildStarted'
-        )
+        errors = {}
 
         build_schema = BuildInfoSchema()
+        build_data: dict = request.json
 
-        build_doc = build_schema.dump(build_info)
-        build_doc.data['build_log'] = None
+        if not any([build_data, build_id]):
+            errors['build_data'] = "Invalid or missing build data."
 
-        print(build_doc)
-        # store in Ceph
-        # build_aggregator.store_build_data(build_doc)
+        build_doc, validation_errors = build_schema.load(build_data, partial=True)
+        build_doc['build_log'] = None
 
-        return request_accepted()
+        if errors.get('build_id', None) and not build_id:
+            # build_id is not provided at all
+            errors['build_id'] = "Invalid or missing `build_id`."
+
+        if not errors:  # validation errors other than build_id are permitted for now
+            # store in Ceph
+            # build_aggregator.store_build_data(build_doc)
+            print('Build document: ', build_doc)
+            print('Validation errors: ', validation_errors)
+
+            return request_accepted(errors=validation_errors)
+
+        else:
+            errors.update(validation_errors)
+
+            return bad_request(errors=errors)
 
 
+@api.route('/complete', defaults={'build_id': None})
 @api.route('/complete/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildCompletedResource(Resource):
@@ -184,7 +200,7 @@ class BuildCompletedResource(Resource):
     """
 
     # noinspection PyMethodMayBeStatic
-    def put(self, build_id):  # pragma: no cover
+    def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build completion hook."""
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
 
