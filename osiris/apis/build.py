@@ -67,7 +67,7 @@ class BuildStatusResource(Resource):
     def get(self, build_id):
         """Return status of the given build."""
 
-        _, build_info = build_aggregator.retrieve_build_log(build_id)
+        _, build_info = build_aggregator.retrieve_build_data(build_id)
 
         return request_ok(payload={
             'build_status': build_info.build_status
@@ -91,7 +91,7 @@ class BuildInfoResource(Resource):
         """Return complete information stored about given build."""
 
         schema = BuildInfoSchema()
-        _, build_info = build_aggregator.retrieve_build_log(build_id)
+        _, build_info = build_aggregator.retrieve_build_data(build_id)
 
         return request_ok(payload=schema.dump(build_info))
 
@@ -109,7 +109,7 @@ class BuildInfoListingResource(Resource):
         """Paginate build information documents stored in Ceph."""
 
         schema = BuildInfoPaginationSchema()
-        page: BuildInfoPagination = build_aggregator.paginate_build_info(page)
+        page: BuildInfoPagination = build_aggregator.paginate_build_data(page)
 
         return request_ok(payload=schema.dump(page))
 
@@ -135,7 +135,7 @@ class BuildLogResource(Resource):
     def get(self, build_id):
         """Return logs stored by the given build."""
 
-        build_log, = build_aggregator.retrieve_build_log(build_id, log_only=True)
+        build_log, = build_aggregator.retrieve_build_data(build_id, log_only=True)
 
         # FIXME: return the whole doc or just the build log?
         return request_ok(
@@ -145,17 +145,6 @@ class BuildLogResource(Resource):
 
 # triggers
 
-@api.route('/init/<string:build_id>')
-@api.param('build_id', 'Unique build identification.')
-class BuildInitiatedResource(Resource):
-    """Receiver hook for initiated builds."""
-
-    # noinspection PyMethodMayBeStatic
-    def put(self, build_id):  # pragma: no cover
-        """Trigger build initiation hook."""
-        return request_accepted()
-
-
 @api.route('/start/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedResource(Resource):
@@ -164,10 +153,27 @@ class BuildStartedResource(Resource):
     # noinspection PyMethodMayBeStatic
     def put(self, build_id):  # pragma: no cover
         """Trigger build start hook."""
+
+        # TODO: run all of the following ops asynchronously
+        # TODO: read build info from body
+        # TODO: get all additional information according to BuildInfoSchema
+        build_info = BuildInfo(
+            build_id, build_status='BuildStarted'
+        )
+
+        build_schema = BuildInfoSchema()
+
+        build_doc = build_schema.dump(build_info)
+        build_doc.data['build_log'] = None
+
+        print(build_doc)
+        # store in Ceph
+        # build_aggregator.store_build_data(build_doc)
+
         return request_accepted()
 
 
-@api.route('/finish/<string:build_id>')
+@api.route('/complete/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildCompletedResource(Resource):
     """Receiver hook for completed builds.
@@ -180,25 +186,26 @@ class BuildCompletedResource(Resource):
     # noinspection PyMethodMayBeStatic
     def put(self, build_id):  # pragma: no cover
         """Trigger build completion hook."""
-
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
 
+        build_schema = BuildInfoSchema()
+
         # TODO: run all of the following ops asynchronously
+        # TODO: read build info from body
+        # TODO: get all additional information according to BuildInfoSchema
+        # get stored build info
+        _, build_info = build_aggregator.retrieve_build_data(build_id)
+
+        build_info.build_status = 'BuildCompleted',
 
         # get build log
         build_log: str = build_aggregator.curl_build_log(build_id, log_level)
 
-        # TODO: get all additional information according to BuildInfoSchema
-        build_info = BuildInfo(
-            build_id, build_status='COMPLETED'
-        )
-
-        build_schema = BuildInfoSchema()
-
         build_doc = build_schema.dump(build_info)
         build_doc.data['build_log'] = build_log
 
+        print(build_doc)
         # store in Ceph
-        _ = build_aggregator.store_build_log(build_doc.data)
+        # build_aggregator.store_build_data(build_doc)
 
         return request_accepted()

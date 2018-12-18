@@ -4,6 +4,8 @@
 
 import shlex
 import subprocess
+import sys
+import typing
 
 from http import HTTPStatus
 
@@ -28,3 +30,43 @@ def execute_command(command: str) -> tuple:
     ret_code: int = proc.wait()
 
     return out, err, ret_code
+
+
+def suppress_exception(exc_type=Exception):
+    """Suppress exception."""
+
+    def _wrapper(fun: typing.Callable):
+
+        def _inner(*args, **kwargs):
+
+            ret = None
+            # noinspection PyBroadException
+            try:
+                ret = fun(*args, **kwargs)
+            except exc_type as exc:
+                # TODO: log caught exception warnging
+                print("[WARNING] Exception caught:", exc, file=sys.stderr)
+
+            return ret
+
+        return _inner
+
+    return _wrapper
+
+
+def noexcept(fun: typing.Callable):
+    """Decorate non-throwing function."""
+
+    def _inner(*args, **kwargs):
+
+        ret = None
+        # noinspection PyBroadException
+        try:
+            ret = fun(*args, **kwargs)
+        except Exception as exc:
+            # TODO: log caught exception warnging
+            print("[WARNING] Exception caught:", exc, file=sys.stderr)
+
+        return ret
+
+    return _inner
