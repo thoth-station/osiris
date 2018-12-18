@@ -10,6 +10,7 @@ pytest = "*"
 requests = "*"
 thoth-storages = "*"
 amun = "*"
+openshift = "*"
 
 [dev-packages]
 
