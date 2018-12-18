@@ -22,8 +22,8 @@ class BuildLog(object):
 class BuildInfo(object):
 
     def __init__(self,
-                 build_id: str,
-                 build_status: str,
+                 build_id: str = None,
+                 build_status: str = None,
                  build_url: str = None,
                  build_log_url: str = None,
                  ocp_info: OCP = None,
@@ -39,18 +39,21 @@ class BuildInfo(object):
 
         self.log_level = log_level or DEFAULT_OC_LOG_LEVEL
 
+    def build_complete(self) -> bool:
+        return self.build_status == 'BuildCompleted'
+
 
 class BuildInfoSchema(Schema):
 
     build_id = fields.String(required=True)
     build_status = fields.String(required=True)
 
-    build_url = fields.Url()
-    build_log_url = fields.Url()
+    build_url = fields.Url(required=False)
+    build_log_url = fields.Url(required=False)
 
-    ocp_info = fields.Nested(OCPSchema)
+    ocp_info = fields.Nested(OCPSchema, required=False)
 
-    log_level = fields.Integer()
+    log_level = fields.Integer(required=False)
 
     @post_load
     def make_build_info(self, data: dict) -> BuildInfo:
@@ -62,7 +65,7 @@ class BuildInfoPagination(object):
     RESULTS_PER_PAGE = 20
 
     def __init__(self,
-                 build_info_list: List[BuildInfo],
+                 build_info_list: List[BuildInfo] = None,
                  total: int = None,
                  has_next: bool = None,
                  has_prev: bool = None):

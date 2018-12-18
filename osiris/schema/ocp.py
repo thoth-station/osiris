@@ -2,8 +2,6 @@
 
 """OCP API schema."""
 
-import typing
-
 from kubernetes.client.models.v1_event import V1Event as Event
 
 from marshmallow import fields
@@ -13,19 +11,18 @@ from marshmallow import Schema
 
 class OCP(object):
 
-    # TODO: include oc env as well?
     def __init__(self,
-                 kind: str,
-                 name: str,
-                 namespace: str,
-                 link: str = None):
+                 kind: str = None,
+                 name: str = None,
+                 namespace: str = None,
+                 self_link: str = None):
 
         self.kind = kind
 
         self.name = name
         self.namespace = namespace
 
-        self.link = link
+        self.self_link = self_link
 
     @classmethod
     def from_event(cls, event: Event):
@@ -33,25 +30,25 @@ class OCP(object):
         name = event.involved_object.name
         namespace = event.involved_object.namespace
 
-        link = event.metadata.self_link
+        self_link = event.metadata.self_link
 
         return cls(
             kind=kind,
             name=name,
             namespace=namespace,
-            link=link
+            self_link=self_link
         )
 
 
 class OCPSchema(Schema):
 
-    kind = fields.String()
+    kind = fields.String(required=True)
 
-    name = fields.String()
-    namespace = fields.String()
+    name = fields.String(required=True)
+    namespace = fields.String(required=True)
 
-    link = fields.Url()
+    self_link = fields.String(required=False)
 
     @post_load
-    def make_build(self, data: dict) -> OCP:
+    def make_ocp(self, data: dict) -> OCP:
         return OCP(**data)

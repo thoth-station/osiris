@@ -7,6 +7,8 @@ import os
 import requests
 import urllib3
 
+from urllib.parse import urljoin
+
 import kubernetes as k8s
 from kubernetes.client.models.v1_event import V1Event as Event
 
@@ -19,21 +21,22 @@ from osiris.schema.build import BuildInfo, BuildInfoSchema
 #       used among other Thoth components, for example by registering callbacks and namespaces
 #       to cover)
 
-_OSIRIS_HOST = ""
+urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
+
+_OSIRIS_HOST = "http://0.0.0.0"  # FIXME
+_OSIRIS_PORT = "5000"  # FIXME
 _OSIRIS_BUILD_START_HOOK = "/build/start"
 _OSIRIS_BUILD_COMPLETED_HOOK = "/build/complete"
 
-_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME', 'thoth-test-core')  # FIXME
+_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME', 'multipurpose')  # FIXME
+
+_KUBE_CONFIG = k8s.client.Configuration()
+_KUBE_CONFIG.verify_ssl = False  # TODO: this should be fixed when running in cluster by load_incluster_config
 
 
-urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
+k8s.config.load_kube_config(client_configuration=_KUBE_CONFIG)
 
-config = k8s.client.Configuration()
-config.verify_ssl = False  # TODO: this should be fixed when running in cluster by load_incluster_config
-
-k8s.config.load_kube_config(client_configuration=config)
-
-api = k8s.client.ApiClient(config)
+api = k8s.client.ApiClient(_KUBE_CONFIG)
 client = k8s.client.CoreV1Api(api)
 
 
@@ -44,12 +47,13 @@ def _is_pod_event(event: Event) -> bool:
 
 @noexcept
 def _is_build_event(event: Event) -> bool:
-    return event.reason in ['BuildStarted', 'BuildCompleted']  # TODO: check for valid event names
+    return event.involved_object.kind == 'Build'
 
 
 @noexcept
-def _is_valid_event(event: Event) -> bool:
-    return _is_pod_event(event) and _is_build_event(event)
+def _is_osiris_event(event: Event) -> bool:
+    # TODO: check for valid event names
+    return _is_build_event(event) and event.reason in ['BuildStarted', 'BuildCompleted']
 
 
 if __name__ == "__main__":
@@ -61,10 +65,8 @@ if __name__ == "__main__":
         kube_event: Event = streamed_event['object']
         print(kube_event)
 
-        if not _is_valid_event(kube_event):
+        if not _is_osiris_event(kube_event):
             continue
-
-        # TODO: speed things up by running async?
 
         # place build event on the osiris build endpoint
         ocp = OCP.from_event(kube_event)
@@ -72,12 +74,24 @@ if __name__ == "__main__":
         build_info = BuildInfo(
             build_id=kube_event.involved_object.name,  # TODO: discuss this, maybe uid, ceph document-id?
             build_status=kube_event.reason,
-            build_url=ocp.link,
+            build_url=urljoin(
+                _KUBE_CONFIG.host, ocp.self_link
+            ),
             ocp_info=ocp
         )
 
         schema = BuildInfoSchema()
+        data, errors = schema.dump(build_info)
 
-        print("Passing build document to Osiris")
-        requests.put(url=_OSIRIS_BUILD_START_HOOK, data=schema.dump(build_info))
+        endpoint = _OSIRIS_BUILD_COMPLETED_HOOK if build_info.build_complete() else _OSIRIS_BUILD_START_HOOK
 
+        try:
+            requests.put(
+                url=urljoin(_OSIRIS_HOST + ":%s" % _OSIRIS_PORT, endpoint),
+                json=data,
+                headers={'content-type': 'application/json'}
+            )
+
+        except requests.exceptions.ConnectionError as exc:
+            # TODO: Osiris might be down, stand idle till it wakes up (probe)?
+            raise exc
