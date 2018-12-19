@@ -37,7 +37,7 @@ _OSIRIS_PORT = os.getenv("OSIRIS_HOST_PORT", "5000")
 _OSIRIS_BUILD_START_HOOK = "/build/started"
 _OSIRIS_BUILD_COMPLETED_HOOK = "/build/completed"
 
-_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME')
+_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME')  # TODO: get from oc/kube config?
 
 _KUBE_CONFIG = kubernetes.client.Configuration()
 _KUBE_CONFIG.verify_ssl = False  # TODO: this should be fixed when running in cluster by load_incluster_config
@@ -105,12 +105,11 @@ if __name__ == "__main__":
 
     with RetrySession() as session:
 
-        put_request = session.prepare_request(
-            requests.Request(
+        put_request = requests.Request(
                 url=':'.join([_OSIRIS_HOST, _OSIRIS_PORT]),
                 method='PUT',
                 headers={'content-type': 'application/json'}
-            ))
+        )
 
         for streamed_event in watch.stream(client.list_namespaced_event,
                                            namespace=_THOTH_DEPLOYMENT_NAME):
@@ -130,15 +129,16 @@ if __name__ == "__main__":
             data, errors = schema.dump(build_info)
 
             osiris_endpoint = _OSIRIS_BUILD_COMPLETED_HOOK if build_info.build_complete() else _OSIRIS_BUILD_START_HOOK
-            osiris_url = urljoin(put_request.url, osiris_endpoint)
 
-            put_request.url = osiris_url
+            put_request.url = urljoin(put_request.url, osiris_endpoint)
             put_request.json = data
 
-            _LOGGER.debug("[EVENT] Event to be posted: %r", kube_event)
-            _LOGGER.info("[EVENT] Posting event '%s' to: %s", kube_event.kind, osiris_url)
+            prep_request = session.prepare_request(put_request)
 
-            resp = session.send(put_request, timeout=60)
+            _LOGGER.debug("[EVENT] Event to be posted: %r", kube_event)
+            _LOGGER.info("[EVENT] Posting event '%s' to: %s", kube_event.kind, put_request.url)
+
+            resp = session.send(prep_request, timeout=60)
 
             if resp.status_code == HTTPStatus.ACCEPTED:
 
@@ -147,4 +147,5 @@ if __name__ == "__main__":
             else:
 
                 _LOGGER.info("[EVENT] Failure.")
-                _LOGGER.info("[EVENT] Response: %r", resp)
+                _LOGGER.info("[EVENT] Status: %d  Reason: %r",
+                             resp.status_code, resp.reason)

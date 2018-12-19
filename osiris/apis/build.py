@@ -183,9 +183,7 @@ class BuildStartedResource(Resource):
 
         if not errors:  # validation errors other than build_id are permitted for now
             # store in Ceph
-            # build_aggregator.store_build_data(build_doc)
-            print('Build document: ', build_doc)
-            print('Validation errors: ', validation_errors)
+            build_aggregator.store_build_data(build_doc)
 
             return request_accepted(errors=validation_errors)
 
@@ -224,8 +222,7 @@ class BuildCompletedResource(Resource):
 
         # TODO: run all of the following ops asynchronously
         # get stored build info
-        # _, build_info = build_aggregator.retrieve_build_data(build_id)
-        build_info = BuildInfo()
+        _, build_info = build_aggregator.retrieve_build_data(build_id)
 
         build_data: dict = request.json
 
@@ -243,8 +240,7 @@ class BuildCompletedResource(Resource):
         build_doc['first_timestamp'] = build_log
         build_doc['last_timestamp'] = build_log
 
-        print(build_doc)
         # store in Ceph
-        # build_aggregator.store_build_data(build_doc)
+        build_aggregator.store_build_data(build_doc)  # FIXME
 
         return request_accepted()
