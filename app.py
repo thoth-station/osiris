@@ -6,8 +6,10 @@
 
 from flask import Flask
 from flask import jsonify
+from flask import request
 from flask_restplus import Resource
 
+from osiris import __name__ as __APP_NAME__
 from osiris.apis import api
 
 from osiris.apis.auth import api as auth_namespace
@@ -27,6 +29,47 @@ api.add_namespace(probes_namespace)
 api.add_namespace(auth_namespace)
 
 api.init_app(app)
+
+
+@app.after_request
+def log_request(response):
+
+    prefix = f"[{__APP_NAME__.upper()}]"
+
+    app.logger.debug(f"{prefix} Request received.")
+
+    addr = request.headers.get('X-Forwarded-For', request.remote_addr)
+    host = request.host.split(':', 1)[0]
+
+    log_params = [
+        ('method', request.method.upper()),
+        ('path', request.path),
+        ('remote_addr', addr),
+        ('host', host),
+        ('status', response.status_code),
+        ('params', request.args),
+        ('data', request.json),
+    ]
+
+    log_msg = "  ".join([f"{param}={value}" for param, value in log_params])
+
+    app.logger.debug(f"{prefix} {log_msg}")
+
+    return response
+
+
+def log_build_request(response):
+    """Log build requests"""
+
+    prefix = "[BUILD]"
+
+    app.logger.info(f"{prefix} Request accepted.")
+    app.logger.info(f"{prefix} Body: {request.json}.")
+
+    return response
+
+
+app.after_request_funcs['build'] = log_build_request
 
 
 @app.errorhandler(OCError)
