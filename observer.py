@@ -3,41 +3,79 @@
 
 """Observer module."""
 
+import ujson
 import os
 import requests
 import urllib3
 
+import daiquiri
+import logging
+import typing
+
+from http import HTTPStatus
+from requests.adapters import HTTPAdapter
+from requests.adapters import Retry
 from urllib.parse import urljoin
 
-import kubernetes as k8s
+import kubernetes
 from kubernetes.client.models.v1_event import V1Event as Event
 
 from osiris.utils import noexcept
-from osiris.schema.ocp import OCP
 from osiris.schema.build import BuildInfo, BuildInfoSchema
 
-# TODO: logging
-# TODO: Discuss whether this module shouldbe standalone (multi-purpose module
-#       used among other Thoth components, for example by registering callbacks and namespaces
-#       to cover)
+daiquiri.setup(
+    level=logging.DEBUG if os.getenv('DEBUG', 0) else logging.INFO,
+)
 
 urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
-_OSIRIS_HOST = "http://0.0.0.0"  # FIXME
-_OSIRIS_PORT = "5000"  # FIXME
-_OSIRIS_BUILD_START_HOOK = "/build/start"
-_OSIRIS_BUILD_COMPLETED_HOOK = "/build/complete"
 
-_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME', 'multipurpose')  # FIXME
+_LOGGER = daiquiri.getLogger()
 
-_KUBE_CONFIG = k8s.client.Configuration()
+_OSIRIS_HOST = os.getenv("OSIRIS_HOST_NAME", "http://0.0.0.0")
+_OSIRIS_PORT = os.getenv("OSIRIS_HOST_PORT", "5000")
+_OSIRIS_BUILD_START_HOOK = "/build/started"
+_OSIRIS_BUILD_COMPLETED_HOOK = "/build/completed"
+
+_THOTH_DEPLOYMENT_NAME = os.getenv('THOTH_DEPLOYMENT_NAME')
+
+_KUBE_CONFIG = kubernetes.client.Configuration()
 _KUBE_CONFIG.verify_ssl = False  # TODO: this should be fixed when running in cluster by load_incluster_config
 
+_REQUESTS_MAX_RETRIES = 10
 
-k8s.config.load_kube_config(client_configuration=_KUBE_CONFIG)
 
-api = k8s.client.ApiClient(_KUBE_CONFIG)
-client = k8s.client.CoreV1Api(api)
+class RetrySession(requests.Session):
+
+    def __init__(self,
+                 adapter_prefixes: typing.List[str] = None,
+                 status_forcelist: typing.Tuple[int] = (500, 502, 504),
+                 method_whitelist: typing.List[str] = None):
+
+        super(RetrySession, self).__init__()
+
+        adapter_prefixes = adapter_prefixes or ["http://", "https://"]
+
+        retry_config = Retry(
+            total=_REQUESTS_MAX_RETRIES,
+            connect=_REQUESTS_MAX_RETRIES,
+            backoff_factor=5,  # determines sleep time
+            status_forcelist=status_forcelist,
+            method_whitelist=method_whitelist
+        )
+        retry_adapter = HTTPAdapter(max_retries=retry_config)
+
+        for prefix in adapter_prefixes:
+            self.mount(prefix, retry_adapter)
+
+
+def new_observer() -> kubernetes.client.CoreV1Api:
+    kubernetes.config.load_kube_config(client_configuration=_KUBE_CONFIG)
+
+    kube_api = kubernetes.client.ApiClient(_KUBE_CONFIG)
+    v1 = kubernetes.client.CoreV1Api(kube_api)
+
+    return v1
 
 
 @noexcept
@@ -53,45 +91,60 @@ def _is_build_event(event: Event) -> bool:
 @noexcept
 def _is_osiris_event(event: Event) -> bool:
     # TODO: check for valid event names
-    return _is_build_event(event) and event.reason in ['BuildStarted', 'BuildCompleted']
+    valid = _is_build_event(event) and event.reason in ['BuildStarted', 'BuildCompleted']
+
+    _LOGGER.debug("[EVENT] Event is valid osiris event: %r", valid)
+
+    return valid
 
 
 if __name__ == "__main__":
 
-    watch = k8s.watch.Watch()
+    client = new_observer()
+    watch = kubernetes.watch.Watch()
 
-    for streamed_event in watch.stream(client.list_namespaced_event,
-                                       namespace=_THOTH_DEPLOYMENT_NAME):
-        kube_event: Event = streamed_event['object']
-        print(kube_event)
+    with RetrySession() as session:
 
-        if not _is_osiris_event(kube_event):
-            continue
-
-        # place build event on the osiris build endpoint
-        ocp = OCP.from_event(kube_event)
-
-        build_info = BuildInfo(
-            build_id=kube_event.involved_object.name,  # TODO: discuss this, maybe uid, ceph document-id?
-            build_status=kube_event.reason,
-            build_url=urljoin(
-                _KUBE_CONFIG.host, ocp.self_link
-            ),
-            ocp_info=ocp
-        )
-
-        schema = BuildInfoSchema()
-        data, errors = schema.dump(build_info)
-
-        endpoint = _OSIRIS_BUILD_COMPLETED_HOOK if build_info.build_complete() else _OSIRIS_BUILD_START_HOOK
-
-        try:
-            requests.put(
-                url=urljoin(_OSIRIS_HOST + ":%s" % _OSIRIS_PORT, endpoint),
-                json=data,
+        put_request = session.prepare_request(
+            requests.Request(
+                url=':'.join([_OSIRIS_HOST, _OSIRIS_PORT]),
+                method='PUT',
                 headers={'content-type': 'application/json'}
-            )
+            ))
 
-        except requests.exceptions.ConnectionError as exc:
-            # TODO: Osiris might be down, stand idle till it wakes up (probe)?
-            raise exc
+        for streamed_event in watch.stream(client.list_namespaced_event,
+                                           namespace=_THOTH_DEPLOYMENT_NAME):
+
+            kube_event: Event = streamed_event['object']
+
+            _LOGGER.debug("[EVENT] New event received.")
+            _LOGGER.debug("[EVENT] Event kind: %s", kube_event.kind)
+
+            if not _is_osiris_event(kube_event):
+                continue
+
+            build_info = BuildInfo.from_event(kube_event)
+            build_url = urljoin(_KUBE_CONFIG.host, build_info.ocp_info.self_link),
+
+            schema = BuildInfoSchema()
+            data, errors = schema.dump(build_info)
+
+            osiris_endpoint = _OSIRIS_BUILD_COMPLETED_HOOK if build_info.build_complete() else _OSIRIS_BUILD_START_HOOK
+            osiris_url = urljoin(put_request.url, osiris_endpoint)
+
+            put_request.url = osiris_url
+            put_request.json = data
+
+            _LOGGER.debug("[EVENT] Event to be posted: %r", kube_event)
+            _LOGGER.info("[EVENT] Posting event '%s' to: %s", kube_event.kind, osiris_url)
+
+            resp = session.send(put_request, timeout=60)
+
+            if resp.status_code == HTTPStatus.ACCEPTED:
+
+                _LOGGER.info("[EVENT] Success.")
+
+            else:
+
+                _LOGGER.info("[EVENT] Failure.")
+                _LOGGER.info("[EVENT] Response: %r", resp)

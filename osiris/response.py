@@ -60,7 +60,7 @@ def request_ok(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cove
 
 @status(HTTPStatus.ACCEPTED)
 def request_accepted(payload=None, errors=None, **kwargs) -> tuple:
-    """API response for accepted request.
+    """API response for accepted put_request.
 
     Request accepted, processing continues off-line.
     """
@@ -69,7 +69,7 @@ def request_accepted(payload=None, errors=None, **kwargs) -> tuple:
 
 @status(HTTPStatus.CREATED)
 def request_created(payload=None, errors=None, **kwargs) -> tuple:
-    """API response for created request.
+    """API response for created put_request.
 
     Document created, URL follows.
     """
@@ -78,7 +78,7 @@ def request_created(payload=None, errors=None, **kwargs) -> tuple:
 
 @status(HTTPStatus.UNAUTHORIZED)
 def request_not_authorized(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cover
-    """API response for unauthorized request.
+    """API response for unauthorized put_request.
 
     No permission -- see authorization schemes.
     """
@@ -87,7 +87,7 @@ def request_not_authorized(payload=None, errors=None, **kwargs) -> tuple:  # pra
 
 @status(HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED)
 def request_not_authenticated(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cover
-    """API response for unauthenticated request.
+    """API response for unauthenticated put_request.
 
     Network Authentication Required,
     The client needs to authenticate to gain network access
@@ -97,7 +97,7 @@ def request_not_authenticated(payload=None, errors=None, **kwargs) -> tuple:  # 
 
 @status(HTTPStatus.FORBIDDEN)
 def request_forbidden(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cover
-    """API response for forbidden request.
+    """API response for forbidden put_request.
 
     Request forbidden -- authorization will not help.
     """
@@ -106,17 +106,17 @@ def request_forbidden(payload=None, errors=None, **kwargs) -> tuple:  # pragma: 
 
 @status(HTTPStatus.BAD_REQUEST)
 def bad_request(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cover
-    """API response for bad request.
+    """API response for bad put_request.
 
-    Bad request syntax or unsupported method.
+    Bad put_request syntax or unsupported method.
     """
     return payload, errors, kwargs
 
 
 @status(HTTPStatus.SERVICE_UNAVAILABLE)
 def request_unavailable(payload=None, errors=None, **kwargs) -> tuple:  # pragma: no cover
-    """API response for bad request.
+    """API response for bad put_request.
 
-    The server cannot process the request at the moment.
+    The server cannot process the put_request at the moment.
     """
     return payload, errors, kwargs
