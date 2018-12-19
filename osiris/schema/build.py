@@ -11,6 +11,8 @@ from marshmallow import Schema
 from osiris import DEFAULT_OC_LOG_LEVEL
 from osiris.schema.ocp import OCP, OCPSchema
 
+from kubernetes.client.models.v1_event import V1Event as Event
+
 
 class BuildLog(object):
 
@@ -38,6 +40,17 @@ class BuildInfo(object):
         self.ocp_info = ocp_info
 
         self.log_level = log_level or DEFAULT_OC_LOG_LEVEL
+
+    @classmethod
+    def from_event(cls, event: Event):
+
+        ocp = OCP.from_event(event)
+
+        return cls(
+            build_id=event.involved_object.name,
+            build_status=event.reason,
+            ocp_info=ocp
+        )
 
     def build_complete(self) -> bool:
         return self.build_status == 'BuildCompleted'

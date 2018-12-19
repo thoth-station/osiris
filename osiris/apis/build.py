@@ -146,19 +146,26 @@ class BuildLogResource(Resource):
 
 # triggers
 
-@api.route('/start', defaults={'build_id': None})
-@api.route('/start/<string:build_id>')
+@api.route('/started', defaults={'build_id': None})
+@api.route('/started/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedResource(Resource):
     """Receiver hook for started builds."""
 
     # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.ACCEPTED,
+                  description="Request has been accepted."
+                              "Document will be stored in Ceph",
+                  )
+    @api.response(code=HTTPStatus.BAD_REQUEST,
+                  description="Request could not be processed due to invalid data"
+                              " or missing build identification."
+                  )
     @api.expect(build_fields)
     def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build start hook."""
 
         # TODO: run all of the following ops asynchronously
-        # TODO: get all additional information according to BuildInfoSchema
         errors = {}
 
         build_schema = BuildInfoSchema()
@@ -188,8 +195,8 @@ class BuildStartedResource(Resource):
             return bad_request(errors=errors)
 
 
-@api.route('/complete', defaults={'build_id': None})
-@api.route('/complete/<string:build_id>')
+@api.route('/completed', defaults={'build_id': None})
+@api.route('/completed/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildCompletedResource(Resource):
     """Receiver hook for completed builds.
@@ -200,6 +207,15 @@ class BuildCompletedResource(Resource):
     """
 
     # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.ACCEPTED,
+                  description="Request has been accepted."
+                              "Document will be stored in Ceph",
+                  )
+    @api.response(code=HTTPStatus.BAD_REQUEST,
+                  description="Request could not be processed due to invalid data"
+                              " or missing build identification."
+                  )
+    @api.expect(build_fields)
     def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build completion hook."""
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
@@ -207,18 +223,25 @@ class BuildCompletedResource(Resource):
         build_schema = BuildInfoSchema()
 
         # TODO: run all of the following ops asynchronously
-        # TODO: read build info from body
-        # TODO: get all additional information according to BuildInfoSchema
         # get stored build info
-        _, build_info = build_aggregator.retrieve_build_data(build_id)
+        # _, build_info = build_aggregator.retrieve_build_data(build_id)
+        build_info = BuildInfo()
 
-        build_info.build_status = 'BuildCompleted',
+        build_data: dict = request.json
+
+        build_doc, validation_errors = build_schema.load(build_data, partial=True)
+        build_doc['build_log'] = None
+
+        build_info.build_status = build_doc['build_status']
 
         # get build log
         build_log: str = build_aggregator.curl_build_log(build_id, log_level)
 
-        build_doc = build_schema.dump(build_info)
-        build_doc.data['build_log'] = build_log
+        build_doc, errors = build_schema.dump(build_info)
+        build_doc['build_log'] = build_log
+        build_doc['creation_timestamp'] = build_log
+        build_doc['first_timestamp'] = build_log
+        build_doc['last_timestamp'] = build_log
 
         print(build_doc)
         # store in Ceph
