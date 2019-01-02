@@ -16,4 +16,4 @@ fi
 export FLASK_APP="$S2I_SOURCE_PATH/app.py"
 
 
-python -m flask run --host=$OSIRIS_HOST --port=$OSIRIS_PORT
+python -m flask run --host=$OSIRIS_HOST_NAME --port=$OSIRIS_HOST_PORT
