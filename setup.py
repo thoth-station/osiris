@@ -11,7 +11,7 @@ with open(os.path.join(BASE_DIR, 'osiris', '__about__.py')) as f:
     exec(f.read(), ABOUT)
 
 with open('requirements.txt') as f:
-    REQUIREMENTS = f.read().split()
+    REQUIREMENTS = f.readlines()
 
 setup(
     name=ABOUT['__title__'],
