@@ -1,5 +1,6 @@
 import os
 
+from setuptools import find_packages
 from setuptools import setup
 
 BASE_DIR = os.path.dirname(__file__)
@@ -38,7 +39,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Utilities",
     ],
-    packages=['osiris'],
+    packages=find_packages(exclude=["tests"]),
 
     install_requires=REQUIREMENTS,
 )
