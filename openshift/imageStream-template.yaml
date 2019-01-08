@@ -32,5 +32,4 @@ parameters:
     displayName: ImageStream Tag
     required: true
     name: IMAGE_STREAM_TAG
-
-value: 'latest'
+    value: 'latest'
