@@ -5,7 +5,7 @@ metadata:
   annotations:
     description: >
       This is Osiris API ConfigMap Template.
-    openshift.io/display-name: 'Thoth: Osiris API ConfigMap'
+    openshift.io/display-name: 'Thoth: Osiris API - ConfigMap'
     tags: ai-stacks,aistacks,build,build-aggregator,build-analysis,thoth,osiris,osiris-api
     template.openshift.io/documentation-url: https://github.com/Thoth-Station/
     template.openshift.io/long-description: >
