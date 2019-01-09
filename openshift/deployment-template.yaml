@@ -44,6 +44,7 @@ objects:
       component: osiris-api
     name: osiris-api
   spec:
+    replicas: 1
     selector:
       app: osiris
       component: osiris-api
@@ -60,6 +61,7 @@ objects:
           deploymentconfig: osiris-api
           service: osiris-api
       spec:
+        replicas: 1
         containers:
         - image: osiris-api:latest
           name: osiris-api
