@@ -79,8 +79,7 @@ class LoginStatusResource(Resource):
 
         login_status = 'NOT AUTHENTICATED' if ret_code > 0 else 'AUTHENTICATED'
 
-        server: str
-        user: str
+        server, user = "", ""
 
         try:
             server, user = out.decode('utf-8').strip().rsplit('/', 1)
