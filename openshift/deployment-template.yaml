@@ -32,7 +32,7 @@ objects:
     THOTH_CEPH_BUCKET_PREFIX: data/thoth
     THOTH_CEPH_KEY_ID: ***REMOVED***
     THOTH_CEPH_SECRET_KEY: ***REMOVED***
-    THOTH_DEPLOYMENT_NAME: macermak
+    THOTH_DEPLOYMENT_NAME: thoth-test-core
     THOTH_S3_ENDPOINT_URL: https://s3.upshift.redhat.com
 
 - apiVersion: v1
