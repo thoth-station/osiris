@@ -51,9 +51,8 @@ objects:
             namespace: openshift
       triggers:
       - type: GitHub
-        github: {}
-      - type: Generic
-        generic: {}
+        github:
+          secret: "osiris-api-build-trigger"
       - type: ConfigChange
       - type: ImageChange
         imageChange: {}
