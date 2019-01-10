@@ -36,7 +36,7 @@ pushd ${TMP_DIR}
 
 echo " -----> Downloading OC Tool."
 
-wget "https://github.com/openshift/origin/releases/download/${OC_TOOL_RELEASE}/${OC_TOOL_FILE_NAME}.tar.gz"
+curl -fLsS "https://github.com/openshift/origin/releases/download/${OC_TOOL_RELEASE}/${OC_TOOL_FILE_NAME}.tar.gz" -o "${OC_TOOL_FILE_NAME}.tar.gz"
 tar -xvf "${OC_TOOL_FILE_NAME}.tar.gz"
 
 echo " -----> Installing OC Tool."
