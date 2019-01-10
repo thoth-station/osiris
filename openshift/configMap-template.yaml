@@ -25,11 +25,22 @@ objects:
       component: configmap
     name: osiris
   data:
-    OSIRIS_HOST_NAME: 0.0.0.0
+    OSIRIS_HOST_NAME: '***REMOVED***'
     OSIRIS_HOST_PORT: '5000'
     THOTH_CEPH_BUCKET: DH-DEV-DATA
     THOTH_CEPH_BUCKET_PREFIX: data/thoth
-    THOTH_CEPH_KEY_ID: ***REMOVED***
-    THOTH_CEPH_SECRET_KEY: ***REMOVED***
+    THOTH_CEPH_KEY_ID: ${CEPH_KEY_ID} 
+    THOTH_CEPH_SECRET_KEY: ${CEPH_SECRET_KEY}
     THOTH_DEPLOYMENT_NAME: thoth-test-core
     THOTH_S3_ENDPOINT_URL: https://s3.upshift.redhat.com
+
+parameters:
+  - description: Ceph storage identification
+    displayName: Ceph key
+    required: True
+    name: CEPH_KEY_ID
+
+  - description: Ceph storage secret key
+    displayName: Ceph secret key
+    required: True
+    name: CEPH_SECRET_KEY
