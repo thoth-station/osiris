@@ -25,6 +25,8 @@ response = Model('response', {
     'app_data': fields.Nested(app_data, attribute='data.app_data'),
     'status': fields.Nested(status, attribute='data.status'),
 
-    'payload': fields.Raw(attribute='data.payload'),
+    'output': fields.Raw,
     'errors': fields.Raw,
+
+    'payload': fields.Raw(attribute='data.payload'),
 })
