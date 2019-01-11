@@ -126,7 +126,9 @@ class LoginResource(Resource):
         schema = LoginSchema()
         login = schema.load(api.payload).data
 
-        login_command = f"oc login {login.server} --token {login.token}"
+        login_command = f"oc login {login.server} " \
+                        f"--token {login.token} " \
+                        f"--insecure-skip-tls-verify"
 
         out, err, ret_code = execute_command(login_command)
 
