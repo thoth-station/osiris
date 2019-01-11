@@ -82,7 +82,7 @@ def handle_oc_error(error: OCError):
     error_dct = error.to_dict()
     error_response = error.response or bad_request
 
-    return jsonify(error_response(errors=error_dct))
+    return jsonify(error_response(errors=error_dct)), error.code
 
 
 # Namespace: default
