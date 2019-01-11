@@ -52,13 +52,18 @@ class Base(object):
         self.app_data = AppData()
         self.status = Status(status)
 
-        self.payload = None
+        self.output = None
         self.errors = None
+
+        self.payload = None
 
 
 class BaseSchema(Schema):
 
     app_data = fields.Nested(AppDataSchema)
     status = fields.Nested(StatusSchema)
+
+    output = fields.Raw()  # oc-client output
+    errors = fields.Raw()  # cli, parsing or other types of errors
 
     payload = fields.Raw()
