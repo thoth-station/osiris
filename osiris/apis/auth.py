@@ -129,9 +129,10 @@ class LoginResource(Resource):
         # update user information
 
         user_data, _, ret_code = execute_command(f"oc whoami -c")
-        server, user = user_data.split('/')
+        namespace, server, user = user_data.decode('utf-8').split('/')
 
-        login.server = server
+        login.namespace = namespace
+        login.host, login.port = server.split(':')
         login.user = user
 
         return request_accepted(
