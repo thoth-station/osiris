@@ -9,16 +9,27 @@ from marshmallow import Schema
 
 class Login(object):
 
-    def __init__(self, server: str, token: str, user: str = ''):
-        self.server: str = server
+    def __init__(self, token: str, server: str = '0.0.0.0',
+                 host: str = '', port: str = '', user: str = ''):
         self.token: str = token
+
+        self.server: str = server
+
+        self.host: str = host
+        self.port: str = port
+
         self.user: str = user
 
 
 class LoginSchema(Schema):
 
-    server = fields.String(required=True)
     token = fields.String(required=True)
+
+    server = fields.String(required=False, default='0.0.0.0')  # if not provided, use localhost
+
+    host = fields.String()
+    port = fields.String()
+
     user = fields.String()
 
     @post_load
