@@ -124,7 +124,7 @@ class LoginResource(Resource):
         :raises OCError: In case of OC CLI failure.
         """
         schema = LoginSchema()
-        login = schema.load(api.payload).data
+        login = schema.load(api.payload)
 
         login_command = f"oc login {login.server} " \
                         f"--token {login.token} " \
