@@ -21,6 +21,8 @@ from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
 
+from werkzeug.exceptions import HTTPException
+
 
 app = Flask(__name__)
 
@@ -72,14 +74,15 @@ def log_build_request(response):
 app.after_request_funcs['build'] = log_build_request
 
 
+@app.errorhandler(HTTPException)
 @app.errorhandler(OCError)
 @app.errorhandler(OCAuthenticationError)
-def handle_oc_error(error: OCError):  # FIXME: The error does not seem to be registered
+def handle_oc_error(error: OCError):
     """Handle exceptions caused by OC CLI."""
     error_dct = error.to_dict()
     error_response = error.response or bad_request
 
-    return jsonify(error_response(error=error_dct))
+    return jsonify(error_response(errors=error_dct))
 
 
 # Namespace: default

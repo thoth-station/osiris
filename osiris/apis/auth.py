@@ -24,6 +24,13 @@ api = Namespace(name='auth',
                 description="Namespace for API authorization.",
                 validate=True)
 
+
+@api.errorhandler(OCError)
+def propagate_login_error(error: OCError):  # FIXME: The error does not seem to be registered
+    """Propagate login error to the global app error handler."""
+    raise error  # re-raise
+
+
 login_fields = api.model('login_fieds', {
     'server': fields.String(
         required=False,
