@@ -31,7 +31,7 @@ objects:
     THOTH_CEPH_BUCKET_PREFIX: data/thoth
     THOTH_CEPH_KEY_ID: ${CEPH_KEY_ID} 
     THOTH_CEPH_SECRET_KEY: ${CEPH_SECRET_KEY}
-    THOTH_DEPLOYMENT_NAME: thoth-test-core
+    THOTH_DEPLOYMENT_NAME: macermak
     THOTH_S3_ENDPOINT_URL: https://s3.upshift.redhat.com
 
 parameters:
