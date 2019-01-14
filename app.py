@@ -4,6 +4,7 @@
 """Flask client."""
 
 from http import HTTPStatus
+from typing import Union
 
 from flask import Flask
 from flask import jsonify
@@ -77,10 +78,10 @@ def log_build_request(response):
 app.after_request_funcs['build'] = log_build_request
 
 
-@app.errorhandler(HTTPException)
 @app.errorhandler(OCError)
 @app.errorhandler(OCAuthenticationError)
-def handle_oc_error(error: OCError):
+def handle_oc_error(
+        error: Union[OCError, OCAuthenticationError]):
     """Handle exceptions caused by OC CLI."""
     error_dct = error.to_dict()
     error_response = error.response or bad_request
