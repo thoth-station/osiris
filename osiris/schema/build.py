@@ -42,14 +42,15 @@ class BuildInfo(object):
         self.log_level = log_level or DEFAULT_OC_LOG_LEVEL
 
     @classmethod
-    def from_event(cls, event: Event):
+    def from_event(cls, event: Event, build_id: str = None, **kwargs):
 
         ocp = OCP.from_event(event)
 
         return cls(
-            build_id=event.involved_object.name,
+            build_id=build_id or f"{event.involved_object.name}-build",
             build_status=event.reason,
-            ocp_info=ocp
+            ocp_info=ocp,
+            **kwargs
         )
 
     def build_complete(self) -> bool:
