@@ -47,6 +47,11 @@ class _BuildLogsAggregator(ResultStorageBase):
                 .all()
         )
 
+    def purge_build_data(self):
+        """Purge build log documents stored in Ceph bucket.
+
+        [WARNING] All data from the bucket will be LOST!"""
+
     def store_build_data(self, build_doc: dict):
         """Store the build log document in Ceph."""
         blob = self.ceph.dict2blob(build_doc)
@@ -58,14 +63,13 @@ class _BuildLogsAggregator(ResultStorageBase):
 
         _BuildLogsAggregator.__COUNT__ += 1
 
-    def retrieve_build_data(self,
-                            build_id: str,
-                            log_only=False) -> Union[Tuple[BuildLog, ],
-                                                     Tuple[BuildLog, BuildInfo]]:
+    def retrieve_build_data(
+            self, build_id: str, log_only=False) -> Union[Tuple[BuildLog, ],
+                                                          Tuple[BuildLog, BuildInfo]]:
         """Retrieve build log document from Ceph by its id."""
         document_id: str = hashlib.sha256(build_id.encode('utf-8')).hexdigest()
 
-        build_doc: dict = self.retrieve_document(document_id)
+        build_doc: dict = self.ceph.retrieve_document(document_id)
         build_log = BuildLog(raw=build_doc.pop('build_log'))
 
         ret: tuple = (build_log, )

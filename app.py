@@ -3,9 +3,10 @@
 
 """Flask client."""
 
-import os
-import sys
 import logging
+import traceback
+
+from datetime import datetime
 
 from http import HTTPStatus
 from typing import Union
@@ -17,7 +18,7 @@ from flask_restplus import Resource
 
 from marshmallow import ValidationError
 
-from osiris import __name__ as __APP_NAME__
+from osiris import __name__ as __APP_NAME__, DEAFULT_LOG_LEVEL
 from osiris.apis import api
 
 from osiris.apis.auth import api as auth_namespace
@@ -29,10 +30,13 @@ from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
 
+from werkzeug.exceptions import InternalServerError
+
+
 app = Flask(__name__)
 
 app.logger.setLevel(
-    getattr(logging, os.getenv('LOGGING_LEVEL', 'INFO'), logging.INFO)
+    level=getattr(logging, DEAFULT_LOG_LEVEL, logging.INFO)
 )
 
 api.add_namespace(build_namespace)
@@ -74,14 +78,18 @@ def log_build_request(response):
 
     prefix = "[BUILD]"
 
-    app.logger.info(f"{prefix} Request accepted.")
-    app.logger.info(f"{prefix} Body: {request.json}.")
+    app.logger.debug(f"{prefix} Request accepted.")
+    app.logger.debug(f"{prefix} Body: {request.json}.")
+    app.logger.debug(f"{prefix} Data: {request.data}.")
 
     return response
 
 
-app.after_request_funcs['build'] = log_build_request
+app.before_request_funcs.setdefault('build', []).append(log_build_request)
 
+
+# Error handlers
+# ---
 
 @app.errorhandler(OCError)
 @app.errorhandler(OCAuthenticationError)
@@ -91,6 +99,8 @@ def handle_oc_error(
     error_dct = error.to_dict()
     error_response = error.response or bad_request
 
+    app.logger.error(traceback.format_exc())
+
     return jsonify(error_response(errors=error_dct)), error.code
 
 
@@ -99,7 +109,37 @@ def handle_schema_validation_error(error: ValidationError):
     """Handle exceptions caused by OC CLI."""
     error_dct = error.messages
 
+    app.logger.error(traceback.format_exc())
+
     return jsonify(bad_request(errors=error_dct)), HTTPStatus.BAD_REQUEST
+
+
+@app.errorhandler(InternalServerError)
+def handle_internal_server_error(exc):
+    """Handle internal server errors."""
+    # Provide some additional information so we can easily find exceptions in logs (time and exception type).
+    # Later we should remove exception type (for security reasons).
+    app.logger.error(traceback.format_exc())
+
+    return jsonify({
+        "message": "Internal server error occurred, please contact administrator with provided details.",
+        "details": {"type": exc.__class__.__name__, "datetime": datetime.utcnow().isoformat()},
+    }), 500
+
+
+@app.errorhandler(Exception)
+def handle_unknown_exception(exc):
+    """Handle internal server errors."""
+    # Provide some additional information so we can easily find exceptions in logs (time and exception type).
+    # Later we should remove exception type (for security reasons).
+    app.logger.error(traceback.format_exc())
+
+    return jsonify({
+                "message": "Unknown exception occured",
+                "details": {"type": exc.__class__.__name__,
+                            "traceback": traceback.format_exc(),
+                            "datetime": datetime.utcnow().isoformat()},
+            }), 500
 
 
 # Namespace: default
