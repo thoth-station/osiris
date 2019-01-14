@@ -3,6 +3,10 @@
 
 """Flask client."""
 
+import os
+import sys
+import logging
+
 from http import HTTPStatus
 from typing import Union
 
@@ -25,8 +29,11 @@ from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
 
-
 app = Flask(__name__)
+
+app.logger.setLevel(
+    getattr(logging, os.getenv('LOGGING_LEVEL', 'INFO'), logging.INFO)
+)
 
 api.add_namespace(build_namespace)
 api.add_namespace(probes_namespace)
