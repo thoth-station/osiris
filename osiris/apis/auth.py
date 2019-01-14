@@ -3,10 +3,13 @@
 """Namespace: auth"""
 
 from http import HTTPStatus
+from typing import Union
 
 from flask_restplus import fields
 from flask_restplus import Namespace
 from flask_restplus import Resource
+
+from marshmallow import ValidationError
 
 from osiris.apis.model import response
 
@@ -26,7 +29,8 @@ api = Namespace(name='auth',
 
 
 @api.errorhandler(OCError)
-def propagate_login_error(error: OCError):  # FIXME: The error does not seem to be registered
+@api.errorhandler(ValidationError)
+def propagate_login_error(error: Union[OCError, ValidationError]):  # FIXME: The error does not seem to be registered
     """Propagate login error to the global app error handler."""
     raise error  # re-raise
 
@@ -124,7 +128,10 @@ class LoginResource(Resource):
         :raises OCError: In case of OC CLI failure.
         """
         schema = LoginSchema()
-        login = schema.load(api.payload)
+        login, errors = schema.load(api.payload)
+
+        if errors:
+            raise ValidationError(errors)
 
         login_command = f"oc login {login.server} " \
                         f"--token {login.token} " \
