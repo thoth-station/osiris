@@ -3,12 +3,15 @@
 """Namespace: build"""
 
 from http import HTTPStatus
+from typing import Union
 
 from flask import request
 
 from flask_restplus import fields
 from flask_restplus import Namespace
 from flask_restplus import Resource
+
+from marshmallow import ValidationError
 
 from osiris import DEFAULT_OC_LOG_LEVEL
 
@@ -23,8 +26,34 @@ from osiris.response import bad_request
 from osiris.schema.build import BuildInfoSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
+from osiris.exceptions import OCError
+
+from werkzeug.exceptions import HTTPException, InternalServerError
+
 
 api = Namespace(name='build', description="Namespace for build triggers.")
+
+
+@api.errorhandler(OCError)
+@api.errorhandler(ValidationError)
+def propagate_build_error(
+        error: Union[OCError, ValidationError]):
+    """Propagate login error to the global app error handler."""
+    raise error  # re-raise
+
+
+@api.errorhandler(HTTPException)
+@api.errorhandler(InternalServerError)
+def propagate_internal_server_error(
+        error: Union[HTTPException, InternalServerError]):
+    """Propagate internal server error to the global app error handler."""
+    raise error  # re-raise
+
+
+@api.errorhandler(Exception)
+def propagate_unknown_exception(error: Exception):
+    """Propagate unknown exception to the global app error handler."""
+    raise error  # re-raise
 
 
 build_fields = api.model('build_fields', {

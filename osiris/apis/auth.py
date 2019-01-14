@@ -19,8 +19,9 @@ from osiris.response import request_ok
 from osiris.schema.auth import LoginSchema
 
 from osiris.exceptions import OCError
-
 from osiris.utils import execute_command
+
+from werkzeug.exceptions import HTTPException, InternalServerError
 
 
 api = Namespace(name='auth',
@@ -30,8 +31,23 @@ api = Namespace(name='auth',
 
 @api.errorhandler(OCError)
 @api.errorhandler(ValidationError)
-def propagate_login_error(error: Union[OCError, ValidationError]):  # FIXME: The error does not seem to be registered
+def propagate_login_error(
+        error: Union[OCError, ValidationError]):
     """Propagate login error to the global app error handler."""
+    raise error  # re-raise
+
+
+@api.errorhandler(HTTPException)
+@api.errorhandler(InternalServerError)
+def propagate_internal_server_error(
+        error: Union[HTTPException, InternalServerError]):
+    """Propagate internal server error to the global app error handler."""
+    raise error  # re-raise
+
+
+@api.errorhandler(Exception)
+def propagate_unknown_exception(error: Exception):
+    """Propagate unknown exception to the global app error handler."""
     raise error  # re-raise
 
 

@@ -17,4 +17,5 @@ __version__ = ABOUT['__version__']
 
 # Environment variables
 
+DEAFULT_LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 DEFAULT_OC_LOG_LEVEL = os.getenv('OC_LOG_LEVEL', 6)
