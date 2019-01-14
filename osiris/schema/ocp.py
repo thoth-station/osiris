@@ -47,7 +47,7 @@ class OCPSchema(Schema):
     name = fields.String(required=True)
     namespace = fields.String(required=True)
 
-    self_link = fields.String(required=False)
+    self_link = fields.String(required=False, allow_none=True)
 
     @post_load
     def make_ocp(self, data: dict) -> OCP:

@@ -17,7 +17,7 @@ from osiris.exceptions import OCAuthenticationError
 from osiris.utils import execute_command
 
 from osiris.schema.build import BuildLog
-from osiris.schema.build import BuildInfo
+from osiris.schema.build import BuildInfo, BuildInfoSchema
 from osiris.schema.build import BuildInfoPagination
 
 # TODO: logging
@@ -61,7 +61,7 @@ class _BuildLogsAggregator(ResultStorageBase):
     def retrieve_build_data(self,
                             build_id: str,
                             log_only=False) -> Union[Tuple[BuildLog, ],
-                                                    Tuple[BuildLog, BuildInfo]]:
+                                                     Tuple[BuildLog, BuildInfo]]:
         """Retrieve build log document from Ceph by its id."""
         document_id: str = hashlib.sha256(build_id.encode('utf-8')).hexdigest()
 
@@ -71,7 +71,7 @@ class _BuildLogsAggregator(ResultStorageBase):
         ret: tuple = (build_log, )
 
         if not log_only:
-            build_info = BuildInfo(**build_doc)
+            build_info, _ = BuildInfoSchema().load(build_doc)
 
             ret = build_log, build_info
 

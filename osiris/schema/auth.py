@@ -27,10 +27,10 @@ class LoginSchema(Schema):
 
     server = fields.String(required=False, default='0.0.0.0')  # if not provided, use localhost
 
-    host = fields.String()
-    port = fields.String()
+    host = fields.String(allow_none=True)
+    port = fields.String(allow_none=True)
 
-    user = fields.String()
+    user = fields.String(allow_none=True)
 
     @post_load
     def make_user(self, data: dict) -> Login:

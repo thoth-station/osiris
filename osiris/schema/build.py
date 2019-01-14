@@ -70,8 +70,8 @@ class BuildInfoSchema(Schema):
     build_id = fields.String(required=True)
     build_status = fields.String(required=True)
 
-    build_url = fields.Url(required=False)
-    build_log_url = fields.Url(required=False)
+    build_url = fields.Url(required=False, allow_none=True)
+    build_log_url = fields.Url(required=False, allow_none=True)
 
     ocp_info = fields.Nested(OCPSchema, required=False)
 
@@ -107,5 +107,5 @@ class BuildInfoPaginationSchema(Schema):
     build_info = fields.List(fields.Nested(BuildInfoSchema))
 
     total = fields.Integer(required=True)
-    has_next = fields.Bool(required=False)
-    has_prev = fields.Bool(required=False)
+    has_next = fields.Bool(required=False, default=False)
+    has_prev = fields.Bool(required=False, default=False)
