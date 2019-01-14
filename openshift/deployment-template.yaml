@@ -52,6 +52,11 @@ objects:
             protocol: TCP
           resources: {}
           env:
+          - name: FLASK_ENV
+            valueFrom:
+              configMapKeyRef:
+                key: FLASK_ENV
+                name: osiris
           - name: OSIRIS_HOST_NAME
             valueFrom:
               configMapKeyRef:
