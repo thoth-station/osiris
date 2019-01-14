@@ -40,6 +40,7 @@ class _BuildLogsAggregator(ResultStorageBase):
 
         # noinspection PyProtectedMember
         _BuildLogsAggregator.__COUNT__ = sum(
+            1 for _ in
             self.ceph._s3.Bucket(self.ceph.bucket)  # pylint: disable=protected-access
                 .objects
                 .filter(Prefix=self.prefix)
