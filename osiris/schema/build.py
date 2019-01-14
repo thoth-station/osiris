@@ -2,6 +2,7 @@
 
 """Build API schema."""
 
+from datetime import datetime
 from typing import List
 
 from marshmallow import fields
@@ -29,6 +30,8 @@ class BuildInfo(object):
                  build_url: str = None,
                  build_log_url: str = None,
                  ocp_info: OCP = None,
+                 first_timestamp: datetime = None,
+                 last_timestamp: datetime = None,
                  log_level: int = None):
 
         self.build_id = build_id
@@ -38,6 +41,9 @@ class BuildInfo(object):
         self.build_log_url = build_log_url
 
         self.ocp_info = ocp_info
+
+        self.first_timestamp = first_timestamp
+        self.last_timestamp = last_timestamp
 
         self.log_level = log_level or DEFAULT_OC_LOG_LEVEL
 
@@ -49,6 +55,8 @@ class BuildInfo(object):
         return cls(
             build_id=build_id or f"{event.involved_object.name}-build",
             build_status=event.reason,
+            first_timestamp=event.first_timestamp,
+            last_timestamp=event.last_timestamp,
             ocp_info=ocp,
             **kwargs
         )
@@ -66,6 +74,9 @@ class BuildInfoSchema(Schema):
     build_log_url = fields.Url(required=False)
 
     ocp_info = fields.Nested(OCPSchema, required=False)
+
+    first_timestamp = fields.DateTime(required=False)
+    last_timestamp = fields.DateTime(required=False)
 
     log_level = fields.Integer(required=False)
 
