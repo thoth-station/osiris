@@ -20,7 +20,7 @@ from osiris.response import request_accepted
 from osiris.response import request_ok
 from osiris.response import bad_request
 
-from osiris.schema.build import BuildInfo, BuildInfoSchema
+from osiris.schema.build import BuildInfoSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 
@@ -169,20 +169,20 @@ class BuildStartedResource(Resource):
 
         build_schema = BuildInfoSchema()
         build_data: dict = request.json
+        build_data['build_log'] = None
 
         if not any([build_data, build_id]):
             errors['build_data'] = "Invalid or missing build data."
 
-        build_doc, validation_errors = build_schema.load(build_data, partial=True)
-        build_doc['build_log'] = None
+        validation_errors = build_schema.validate(build_data)
 
-        if errors.get('build_id', None) and not build_id:
+        if validation_errors.get('build_id', None) and not build_id:
             # build_id is not provided at all
             errors['build_id'] = "Invalid or missing `build_id`."
 
         if not errors:  # validation errors other than build_id are permitted for now
             # store in Ceph
-            build_aggregator.store_build_data(build_doc)
+            build_aggregator.store_build_data(build_data)
 
             return request_accepted(errors=validation_errors)
 
@@ -216,29 +216,25 @@ class BuildCompletedResource(Resource):
         """Trigger build completion hook."""
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
 
-        build_schema = BuildInfoSchema()
-
         # TODO: run all of the following ops asynchronously
         # get stored build info
         _, build_info = build_aggregator.retrieve_build_data(build_id)
 
+        build_schema = BuildInfoSchema()
         build_data: dict = request.json
 
-        build_doc, validation_errors = build_schema.load(build_data, partial=True)
-        build_doc['build_log'] = None
-
-        build_info.build_status = build_doc['build_status']
+        build_info.build_status = build_data['build_status']
 
         # get build log
         build_log: str = build_aggregator.curl_build_log(build_id, log_level)
 
-        build_doc, errors = build_schema.dump(build_info)
+        # TODO: handle validation errors
+        build_doc, validation_errors = build_schema.dump(build_info)
         build_doc['build_log'] = build_log
-        build_doc['creation_timestamp'] = build_log
-        build_doc['first_timestamp'] = build_log
-        build_doc['last_timestamp'] = build_log
+        build_doc['first_timestamp'] = build_data['first_timestamp']
+        build_doc['last_timestamp'] = build_data['last_timestamp']
 
         # store in Ceph
-        build_aggregator.store_build_data(build_doc)  # FIXME
+        build_aggregator.store_build_data(build_doc)
 
-        return request_accepted()
+        return request_accepted(errors=validation_errors)
