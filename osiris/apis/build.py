@@ -231,8 +231,6 @@ class BuildCompletedResource(Resource):
         # TODO: handle validation errors
         build_doc, validation_errors = build_schema.dump(build_info)
         build_doc['build_log'] = build_log
-        build_doc['first_timestamp'] = build_data['first_timestamp']
-        build_doc['last_timestamp'] = build_data['last_timestamp']
 
         # store in Ceph
         build_aggregator.store_build_data(build_doc)
