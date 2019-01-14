@@ -3,11 +3,14 @@
 
 """Flask client."""
 
+from http import HTTPStatus
 
 from flask import Flask
 from flask import jsonify
 from flask import request
 from flask_restplus import Resource
+
+from marshmallow import ValidationError
 
 from osiris import __name__ as __APP_NAME__
 from osiris.apis import api
@@ -83,6 +86,14 @@ def handle_oc_error(error: OCError):
     error_response = error.response or bad_request
 
     return jsonify(error_response(errors=error_dct)), error.code
+
+
+@app.errorhandler(ValidationError)
+def handle_schema_validation_error(error: ValidationError):
+    """Handle exceptions caused by OC CLI."""
+    error_dct = error.messages
+
+    return jsonify(bad_request(errors=error_dct)), HTTPStatus.BAD_REQUEST
 
 
 # Namespace: default
