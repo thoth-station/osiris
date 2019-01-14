@@ -25,8 +25,6 @@ from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
 
-from werkzeug.exceptions import HTTPException
-
 
 app = Flask(__name__)
 
