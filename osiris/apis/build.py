@@ -146,7 +146,6 @@ class BuildLogResource(Resource):
 
 # triggers
 
-@api.route('/started', defaults={'build_id': None})
 @api.route('/started/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedResource(Resource):
@@ -193,7 +192,6 @@ class BuildStartedResource(Resource):
             return bad_request(errors=errors)
 
 
-@api.route('/completed', defaults={'build_id': None})
 @api.route('/completed/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildCompletedResource(Resource):
