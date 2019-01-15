@@ -104,7 +104,7 @@ class BuildInfoPagination(object):
 
 class BuildInfoPaginationSchema(Schema):
 
-    build_info = fields.List(fields.Nested(BuildInfoSchema))
+    build_info = fields.Nested(BuildInfoSchema, many=True)
 
     total = fields.Integer(required=True)
     has_next = fields.Bool(required=False, default=False)
