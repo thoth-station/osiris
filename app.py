@@ -69,7 +69,7 @@ def log_request(response):
     log_msg = "  ".join([f"{param}={value}" for param, value in log_params])
 
     app.logger.debug(f"{prefix} {log_msg}")
-    app.logger.debug(f"{prefix} Response: {response}")
+    app.logger.debug(f"{prefix} Response: {response.json}")
 
     return response
 
