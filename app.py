@@ -8,7 +8,6 @@ import traceback
 
 from datetime import datetime
 
-from http import HTTPStatus
 from typing import Union
 
 from flask import Flask

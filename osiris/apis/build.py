@@ -6,6 +6,7 @@ from http import HTTPStatus
 from typing import Union
 
 from flask import request
+from flask import url_for
 
 from flask_restplus import fields
 from flask_restplus import Namespace
@@ -254,6 +255,7 @@ class BuildCompletedResource(Resource):
 
         build_data: dict = request.json
         build_info.build_status = build_data['build_status']
+        build_info.build_log_url = url_for('build_build_log_resource', build_id=build_id)
 
         # get build log
         build_log: str = build_aggregator.curl_build_log(
