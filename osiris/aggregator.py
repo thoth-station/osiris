@@ -122,7 +122,7 @@ class _BuildLogsAggregator(ResultStorageBase):
         return build_info_pagination
 
     @staticmethod
-    def curl_build_log(build_id: str, log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
+    def curl_build_log(build_id: str, namespace: str, log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
         """Curl OCP for build log for the given build.
 
         :raises OCError: In case of OC CLI failure.
@@ -135,7 +135,9 @@ class _BuildLogsAggregator(ResultStorageBase):
                 payload=err.decode('utf-8')
             )
 
-        log_command = f"oc logs {build_id} --loglevel {log_level}"
+        log_command = f"oc logs {build_id} " \
+                      f"--namespace {namespace} " \
+                      f"--loglevel {log_level}"
 
         out, err, ret_code = execute_command(log_command)
 

@@ -87,7 +87,8 @@ def handle_oc_error(
 
     app.logger.error(traceback.format_exc())
 
-    return jsonify(error_response(errors=error_dct)), error.code
+    resp, code = error_response(errors=error_dct)
+    return jsonify(resp), code
 
 
 @app.errorhandler(ValidationError)
@@ -97,7 +98,8 @@ def handle_schema_validation_error(error: ValidationError):
 
     app.logger.error(traceback.format_exc())
 
-    return jsonify(bad_request(errors=error_dct)), HTTPStatus.BAD_REQUEST
+    resp, code = bad_request(errors=error_dct)
+    return jsonify(resp), code
 
 
 @app.errorhandler(InternalServerError)
@@ -121,11 +123,11 @@ def handle_unknown_exception(exc):
     app.logger.error(traceback.format_exc())
 
     return jsonify({
-                "message": "Unknown exception occured",
-                "details": {"type": exc.__class__.__name__,
-                            "traceback": traceback.format_exc(),
-                            "datetime": datetime.utcnow().isoformat()},
-            }), 500
+        "message": "Unknown exception occurred",
+        "details": {"type": exc.__class__.__name__,
+                    "traceback": traceback.format_exc(),
+                    "datetime": datetime.utcnow().isoformat()},
+    }), 500
 
 
 # Namespace: default
