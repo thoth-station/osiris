@@ -23,7 +23,7 @@ from osiris.response import request_accepted
 from osiris.response import request_ok
 from osiris.response import bad_request
 
-from osiris.schema.build import BuildInfoSchema
+from osiris.schema.build import BuildInfo, BuildInfoSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 from osiris.exceptions import OCError
@@ -247,15 +247,20 @@ class BuildCompletedResource(Resource):
 
         # TODO: run all of the following ops asynchronously
         # get stored build info
+        build_info: BuildInfo
         _, build_info = build_aggregator.retrieve_build_data(build_id)
 
         build_schema = BuildInfoSchema()
-        build_data: dict = request.json
 
+        build_data: dict = request.json
         build_info.build_status = build_data['build_status']
 
         # get build log
-        build_log: str = build_aggregator.curl_build_log(build_id, log_level)
+        build_log: str = build_aggregator.curl_build_log(
+            build_id,
+            namespace=build_info.ocp_info.namespace,
+            log_level=log_level
+        )
 
         # TODO: handle validation errors
         build_doc, validation_errors = build_schema.dump(build_info)
