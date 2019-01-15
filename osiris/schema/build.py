@@ -62,7 +62,7 @@ class BuildInfo(object):
         )
 
     def build_complete(self) -> bool:
-        return self.build_status == 'BuildCompleted'
+        return self.build_status == 'BuildCompleted' or self.build_status == 'BuildFailed'
 
 
 class BuildInfoSchema(Schema):
