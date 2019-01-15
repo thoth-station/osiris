@@ -69,23 +69,9 @@ def log_request(response):
     log_msg = "  ".join([f"{param}={value}" for param, value in log_params])
 
     app.logger.debug(f"{prefix} {log_msg}")
+    app.logger.debug(f"{prefix} Response: {response}")
 
     return response
-
-
-def log_build_request(response):
-    """Log build requests"""
-
-    prefix = "[BUILD]"
-
-    app.logger.debug(f"{prefix} Request accepted.")
-    app.logger.debug(f"{prefix} Body: {request.json}.")
-    app.logger.debug(f"{prefix} Data: {request.data}.")
-
-    return response
-
-
-app.before_request_funcs.setdefault('build', []).append(log_build_request)
 
 
 # Error handlers
