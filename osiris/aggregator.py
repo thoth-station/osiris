@@ -47,10 +47,19 @@ class _BuildLogsAggregator(ResultStorageBase):
                 .all()
         )
 
-    def purge_build_data(self):
+    def purge_build_data(self, prefix: str = None):
         """Purge build log documents stored in Ceph bucket.
 
         [WARNING] All data from the bucket will be LOST!"""
+        # noinspection PyProtectedMember
+        bucket = self.ceph._s3.Bucket(self.ceph.bucket)
+        # delete all objects in the bucket by the given prefix
+        bucket.objects.filter(Prefix=prefix or self.prefix) \
+                      .all() \
+                      .delete()
+
+        self.__COUNT__ = 0
+        self.__PAGINATION_TOKEN__ = None
 
     def store_build_data(self, build_doc: dict):
         """Store the build log document in Ceph."""
