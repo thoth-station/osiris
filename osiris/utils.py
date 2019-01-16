@@ -7,7 +7,22 @@ import subprocess
 import sys
 import typing
 
+from functools import wraps
 from http import HTTPStatus
+
+from osiris.exceptions import OCAuthenticationError
+
+
+def oc_authentication_required(f):
+    @wraps(f)
+    def inner(*args, **kwargs):
+        out, _, ret_code = execute_command("oc whoami")
+
+        if ret_code > 0:
+            raise OCAuthenticationError(out)
+
+        return f(*args, **kwargs)
+    return inner
 
 
 def format_status_message(status: HTTPStatus) -> str:
