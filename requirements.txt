@@ -57,6 +57,7 @@ ruamel.yaml==0.15.86
 s3transfer==0.1.13
 sentry-sdk==0.6.6
 six==1.10.0
+thoth-common @ git+https://github.com/thoth-station/common.git
 thoth-storages==0.9.5
 tornado==4.4.1
 tzlocal==1.5.1

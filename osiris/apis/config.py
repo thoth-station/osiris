@@ -3,6 +3,7 @@
 """Namespace: auth"""
 
 from http import HTTPStatus
+from pathlib import Path
 from typing import Union
 
 from flask_restplus import fields
@@ -113,6 +114,13 @@ class ConfigResource(Resource):
 
         except (FileNotFoundError, KeyError) as exc:
             errors['context'] = str(exc)
+
+            if client.in_cluster:
+                client_config.namespace = Path(
+                    "/run/secrets/kubernetes.io/serviceaccount/namespace"
+                ).read_text()
+            else:
+                client_config.namespace = client.middletier_namespace
 
         return request_ok(
             payload=schema.dump(client_config.__dict__),
