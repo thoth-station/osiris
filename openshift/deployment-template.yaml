@@ -44,6 +44,7 @@ objects:
           deploymentconfig: osiris-api
           service: osiris-api
       spec:
+        serviceAccountName: analyzer
         containers:
         - image: osiris-api:latest
           name: osiris-api
@@ -56,6 +57,11 @@ objects:
             valueFrom:
               configMapKeyRef:
                 key: FLASK_ENV
+                name: osiris
+          - name: KUBERNETES_VERIFY_TLS
+            valueFrom:
+              configMapKeyRef:
+                key: KUBERNETES_VERIFY_TLS
                 name: osiris
           - name: OSIRIS_HOST_NAME
             valueFrom:
