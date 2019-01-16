@@ -35,7 +35,7 @@ class OCAuthenticationError(Unauthorized):
     def __init__(self, payload=None, response=None):
         super(Unauthorized, self).__init__()
 
-        self.message = f"OC CLI has not been authenticated"
+        self.message = f"Client has not been authenticated"
         self.payload = payload
 
         self.response = response
