@@ -7,7 +7,7 @@ __title__ = "osiris"
 __summary__ = "Build log aggregation and analysis."
 __uri__ = ""
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 __author__ = "Marek Cermak"
 __email__ = "macermak@redhat.com"
