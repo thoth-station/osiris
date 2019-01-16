@@ -61,7 +61,7 @@ build_fields = api.model('build_fields', {
     'build_id': fields.String(
         required=True,
         description="Unique build identification.",
-        example="osiris-api-1-build"
+        example="osiris-api-1"
     ),
     'build_status': fields.String(
         required=True,
