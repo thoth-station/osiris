@@ -17,17 +17,18 @@ from flask_restplus import Resource
 
 from marshmallow import ValidationError
 
-from osiris import __name__ as __APP_NAME__, DEAFULT_LOG_LEVEL
-from osiris.apis import api
+from osiris import __name__ as __APP_NAME__
+from osiris import DEFAULT_LOG_LEVEL
+from osiris import get_oc_client
 
-from osiris.apis.auth import api as auth_namespace
-from osiris.apis.build import api as build_namespace
-from osiris.apis.probes import api as probes_namespace
+from osiris.apis import api
 
 from osiris.exceptions import OCError
 from osiris.exceptions import OCAuthenticationError
 
 from osiris.response import bad_request
+
+from thoth.common.openshift import OpenShift
 
 from werkzeug.exceptions import InternalServerError
 
@@ -35,14 +36,24 @@ from werkzeug.exceptions import InternalServerError
 app = Flask(__name__)
 
 app.logger.setLevel(
-    level=getattr(logging, DEAFULT_LOG_LEVEL, logging.INFO)
+    level=getattr(logging, DEFAULT_LOG_LEVEL, logging.INFO)
 )
 
-api.add_namespace(build_namespace)
-api.add_namespace(probes_namespace)
-api.add_namespace(auth_namespace)
-
 api.init_app(app)
+
+
+@app.before_first_request
+def check_configuration():
+    """Check client configuration."""
+    client: OpenShift = get_oc_client()
+
+    prefix = f"[{__APP_NAME__.upper()}]"
+
+    if client.in_cluster:
+        app.logger.info(f"{prefix} Running in Kubernetes cluster.")
+
+    app.logger.debug(f"{prefix} OpenShift Client Configuration: %s",
+                     client.ocp_client.configuration.__dict__)
 
 
 @app.after_request

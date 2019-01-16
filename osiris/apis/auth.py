@@ -11,6 +11,10 @@ from flask_restplus import Resource
 
 from marshmallow import ValidationError
 
+from osiris import set_context
+from osiris import set_token
+from osiris import set_namespace
+
 from osiris.apis.model import response
 
 from osiris.response import request_accepted
@@ -52,12 +56,17 @@ def propagate_unknown_exception(error: Exception):
 
 
 login_fields = api.model('login_fieds', {
-    'server': fields.String(
+    'host': fields.String(
         required=False,
-        description="Server the user is currently logged into.",
+        description="Host the user is currently logged into.",
         example="<host>:<port>"
     ),
-    'user': fields.String(
+    'context': fields.String(
+        required=False,
+        description="Current context.",
+        example="<username>"
+    ),
+    'namespace': fields.String(
         required=False,
         description="Current user.",
         example="<username>"
@@ -100,22 +109,18 @@ class LoginStatusResource(Resource):
         ]})
     def get(self):
         """Check whether current session is authorized."""
-
-        out: bytes
-        out, _, ret_code = execute_command("oc whoami --show-context")
-
-        login_status = 'NOT AUTHENTICATED' if ret_code > 0 else 'AUTHENTICATED'
-
-        server, user = "", ""
+        context = None
+        login_status = 'AUTHENTICATED'
 
         try:
-            server, user = out.decode('utf-8').strip().rsplit('/', 1)
-        except ValueError:
-            pass
+            context = _oc_show_context()
+
+        except OCError:
+
+            login_status = 'NOT AUTHENTICATED'
 
         payload = {
-            'server': server,
-            'user': user,
+            'context': context,
             'login_status': login_status
         }
 
@@ -149,26 +154,70 @@ class LoginResource(Resource):
         if errors:
             raise ValidationError(errors)
 
-        login_command = f"oc login {login.server} " \
-                        f"--token {login.token} " \
-                        f"--insecure-skip-tls-verify"
+        login_output: str = _oc_login(login)
 
-        out, err, ret_code = execute_command(login_command)
+        # update user information
+        login.context = _oc_show_context()
+        namespace, host, user = login.context.split('/')
+
+        login.namespace = namespace
+        login.host, login.port = host.split(':')
+        login.user = user
+        login.token = _oc_show_token()
+
+        # set Osiris environment
+        set_token(login.token)
+        set_context(login.context)
+        set_namespace(login.namespace)
+
+        return request_accepted(
+            payload=schema.dump(login),
+            output=login_output
+        )
+
+
+def _oc_show_context() -> str:
+    """Show current OC context."""
+    context: bytes
+    context, err, ret_code = execute_command("oc whoami --show-context")
+
+    if ret_code > 0:
+        raise OCError(ret_code, payload=err.decode('utf-8'))
+
+    return context.decode('utf-8').strip()
+
+
+def _oc_show_token() -> str:
+    """Show current OC token."""
+    token: bytes
+    token, err, ret_code = execute_command("oc whoami --show-token")
+
+    if ret_code > 0:
+        raise OCError(ret_code, payload=err.decode('utf-8'))
+
+    return token.decode('utf-8').strip()
+
+
+def _oc_login(login) -> str:
+    """Login to the OpenShift cluster using OC CLI."""
+
+    login_command = f"oc login {login.url} " \
+                    f"--token {login.token} " \
+                    f"--insecure-skip-tls-verify"
+
+    out: bytes
+    err: bytes
+
+    out, err, ret_code = execute_command(login_command)
+
+    if ret_code > 0:
+        raise OCError(ret_code, payload=err.decode('utf-8'))
+
+    if login.namespace:
+        # switch to correct oc project
+        _, err, ret_code = execute_command(f"oc project {login.namespace}")
 
         if ret_code > 0:
             raise OCError(ret_code, payload=err.decode('utf-8'))
 
-        # update user information
-
-        user_data, _, ret_code = execute_command(f"oc whoami -c")
-        namespace, server, user = user_data.decode('utf-8').split('/')
-
-        login.namespace = namespace
-        login.host, login.port = server.split(':')
-        login.user = user
-
-        return request_accepted(
-            payload=schema.dump(login),
-            output=out.decode('utf-8')
-        )
-
+    return out.decode('utf-8')
