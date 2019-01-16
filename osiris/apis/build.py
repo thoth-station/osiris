@@ -255,7 +255,8 @@ class BuildCompletedResource(Resource):
 
         build_data: dict = request.json
         build_info.build_status = build_data['build_status']
-        build_info.build_log_url = url_for('build_build_log_resource', build_id=build_id)
+        build_info.build_log_url = url_for(
+            'build_build_log_resource', build_id=build_id, _external=True)
 
         # get build log
         build_log: str = build_aggregator.get_build_log(
