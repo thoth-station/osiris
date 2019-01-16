@@ -33,11 +33,11 @@ DEFAULT_OC_PROJECT = os.getenv('OC_PROJECT', None)
 # OpenShift client
 
 _OPENSHIFT_HOST = None
+_OPENSHIFT_CONTEXT = os.getenv("OPENSHIFT_CONTEXT", None)
 _OPENSHIFT_NAMESPACE = os.getenv("MIDDLETIER_NAMESPACE", None)
 
 _OPENSHIFT_TOKEN = None
 _OPENSHIFT_CLIENT = None
-_OPENSHIFT_CONTEXT = None
 
 
 def set_token(token: str):
