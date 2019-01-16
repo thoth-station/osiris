@@ -101,17 +101,18 @@ class ConfigResource(Resource):
         client_config = client.ocp_client.configuration
         client_config.token = client.token
 
-        context = None
         errors = dict()
+
         try:
             _, context = list_kube_config_contexts()
+
+            client_config.context = context['name']
+            client_config.cluster = context['context']['cluster']
+            client_config.namespace = context['context']['namespace']
+            client_config.username, _ = context['context']['user'].split('/')
+
         except (FileNotFoundError, KeyError) as exc:
             errors['context'] = str(exc)
-
-        client_config.context = context['name']
-        client_config.cluster = context['context']['cluster']
-        client_config.namespace = context['context']['namespace']
-        client_config.username, _ = context['context']['user'].split('/')
 
         return request_ok(
             payload=schema.dump(client_config.__dict__),

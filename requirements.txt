@@ -22,7 +22,6 @@ dictdiffer==0.7.1
 docutils==0.14
 flask-restplus==0.12.1
 flask==1.0.2
-git+git://github.com/thoth-station/common.git@master#egg=thoth-common
 goblin==2.1.0
 google-auth==1.6.2
 gremlinpython==3.2.6
