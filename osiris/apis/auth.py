@@ -11,16 +11,9 @@ from flask_restplus import Resource
 
 from marshmallow import ValidationError
 
-from osiris import set_context
-from osiris import set_token
-from osiris import set_namespace
-
 from osiris.apis.model import response
 
-from osiris.response import request_accepted
 from osiris.response import request_ok
-
-from osiris.schema.auth import LoginSchema
 
 from osiris.exceptions import OCError
 from osiris.utils import execute_command
@@ -99,8 +92,8 @@ login_request = api.model('login_request', {
 
 
 @api.route("/status")
-class LoginStatusResource(Resource):
-    """Authorization endpoint."""
+class AuthStatusResource(Resource):
+    """Authentication endpoint."""
 
     @api.marshal_with(login_response)
     @api.doc(responses={
@@ -114,9 +107,7 @@ class LoginStatusResource(Resource):
 
         try:
             context = _oc_show_context()
-
         except OCError:
-
             login_status = 'NOT AUTHENTICATED'
 
         payload = {
@@ -125,55 +116,6 @@ class LoginStatusResource(Resource):
         }
 
         return request_ok(payload=payload)
-
-
-@api.route("/login")
-class LoginResource(Resource):
-
-    @api.marshal_with(login_response,
-                      code=HTTPStatus.ACCEPTED,
-                      skip_none=True)
-    @api.doc(
-        responses={
-            s.value: s.description for s in [
-                HTTPStatus.ACCEPTED,
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.FAILED_DEPENDENCY,
-                HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED
-            ]},
-        body=login_request
-    )
-    def post(self):
-        """Authorize current session.
-
-        :raises OCError: In case of OC CLI failure.
-        """
-        schema = LoginSchema()
-        login, errors = schema.load(api.payload)
-
-        if errors:
-            raise ValidationError(errors)
-
-        login_output: str = _oc_login(login)
-
-        # update user information
-        login.context = _oc_show_context()
-        namespace, host, user = login.context.split('/')
-
-        login.namespace = namespace
-        login.host, login.port = host.split(':')
-        login.user = user
-        login.token = _oc_show_token()
-
-        # set Osiris environment
-        set_token(login.token)
-        set_context(login.context)
-        set_namespace(login.namespace)
-
-        return request_accepted(
-            payload=schema.dump(login),
-            output=login_output
-        )
 
 
 def _oc_show_context() -> str:
@@ -196,28 +138,3 @@ def _oc_show_token() -> str:
         raise OCError(ret_code, payload=err.decode('utf-8'))
 
     return token.decode('utf-8').strip()
-
-
-def _oc_login(login) -> str:
-    """Login to the OpenShift cluster using OC CLI."""
-
-    login_command = f"oc login {login.url} " \
-                    f"--token {login.token} " \
-                    f"--insecure-skip-tls-verify"
-
-    out: bytes
-    err: bytes
-
-    out, err, ret_code = execute_command(login_command)
-
-    if ret_code > 0:
-        raise OCError(ret_code, payload=err.decode('utf-8'))
-
-    if login.namespace:
-        # switch to correct oc project
-        _, err, ret_code = execute_command(f"oc project {login.namespace}")
-
-        if ret_code > 0:
-            raise OCError(ret_code, payload=err.decode('utf-8'))
-
-    return out.decode('utf-8')
