@@ -27,6 +27,7 @@ objects:
   data:
     FLASK_ENV: development
     MIDDLETIER_NAMESPACE: thoth-test-core
+    KUBERNETES_VERIFY_TLS: '0'
     OSIRIS_HOST_NAME: 'http://osiris-api-thoth-test-core.cloud.paas.upshift.redhat.com/'
     OSIRIS_HOST_PORT: '5000'
     THOTH_CEPH_BUCKET: DH-DEV-DATA
