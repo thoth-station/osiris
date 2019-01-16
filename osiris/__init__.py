@@ -32,49 +32,8 @@ DEFAULT_OC_PROJECT = os.getenv('OC_PROJECT', None)
 
 # OpenShift client
 
-_OPENSHIFT_HOST = None
-_OPENSHIFT_CONTEXT = os.getenv("OPENSHIFT_CONTEXT", None)
-_OPENSHIFT_NAMESPACE = os.getenv("MIDDLETIER_NAMESPACE", None)
-
-_OPENSHIFT_TOKEN = None
 _OPENSHIFT_CLIENT = None
-
-
-def set_token(token: str):
-    global _OPENSHIFT_TOKEN
-
-    _OPENSHIFT_TOKEN = token
-
-
-def set_context(context: str):
-    global _OPENSHIFT_CONTEXT
-
-    _OPENSHIFT_CONTEXT = context
-
-
-def set_namespace(namespace: str):
-    global _OPENSHIFT_NAMESPACE
-
-    _OPENSHIFT_NAMESPACE = namespace
-
-
-def new_oc_client() -> OpenShift:
-    global _OPENSHIFT_CLIENT, \
-           _OPENSHIFT_CONTEXT, \
-           _OPENSHIFT_TOKEN, \
-           _OPENSHIFT_HOST
-
-    # initialize openshift client for the current namespace
-    _OPENSHIFT_CLIENT = OpenShift(
-        token=_OPENSHIFT_TOKEN,  # if None, get from environment / service account
-        # context=_OPENSHIFT_CONTEXT,  # TODO
-        middletier_namespace=_OPENSHIFT_NAMESPACE
-    )
-
-    _OPENSHIFT_HOST = _OPENSHIFT_CLIENT.ocp_client.configuration.host
-    _OPENSHIFT_TOKEN = _OPENSHIFT_CLIENT.token
-
-    return _OPENSHIFT_CLIENT
+_OPENSHIFT_NAMESPACE = os.getenv("MIDDLETIER_NAMESPACE", None)
 
 
 def get_oc_client() -> OpenShift:
@@ -85,19 +44,11 @@ def get_oc_client() -> OpenShift:
     """
     global _OPENSHIFT_CLIENT
 
-    if _OPENSHIFT_CLIENT is not None:  # client is not re-initialized if there are no changes
+    if _OPENSHIFT_CLIENT is None:  # client is not re-initialized if there are no changes
 
-        # check token
-        has_changed = (
-                _OPENSHIFT_CLIENT.token != _OPENSHIFT_TOKEN or
-                # _OPENSHIFT_CLIENT.context != _OPENSHIFT_CONTEXT or  # TODO
-                _OPENSHIFT_CLIENT.middletier_namespace != _OPENSHIFT_NAMESPACE
+        # initialize openshift client for the current namespace
+        _OPENSHIFT_CLIENT = OpenShift(
+            middletier_namespace=_OPENSHIFT_NAMESPACE
         )
 
-        if has_changed:
-            _OPENSHIFT_CLIENT = new_oc_client()
-
-        # noinspection PyTypeChecker
-        return _OPENSHIFT_CLIENT
-
-    return new_oc_client()
+    return _OPENSHIFT_CLIENT
