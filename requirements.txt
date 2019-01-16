@@ -1,4 +1,3 @@
--i https://pypi.org/simple
 adal==1.2.0
 aenum==1.4.5
 aiogremlin==3.2.6rc1
@@ -23,7 +22,7 @@ dictdiffer==0.7.1
 docutils==0.14
 flask-restplus==0.12.1
 flask==1.0.2
-git+https://github.com/thoth-station/common.git@224e1f95045f987aef64e8f7a9eda5af4ee7eff6#egg=thoth-common
+git+git://github.com/thoth-station/common.git@master#egg=thoth-common
 goblin==2.1.0
 google-auth==1.6.2
 gremlinpython==3.2.6
