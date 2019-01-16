@@ -258,7 +258,7 @@ class BuildCompletedResource(Resource):
         build_info.build_log_url = url_for('build_build_log_resource', build_id=build_id)
 
         # get build log
-        build_log: str = build_aggregator.curl_build_log(
+        build_log: str = build_aggregator.get_build_log(
             build_id,
             namespace=build_info.ocp_info.namespace,
             log_level=log_level

@@ -11,6 +11,7 @@ from typing import Tuple, Union
 from thoth.storages.result_base import ResultStorageBase
 
 from osiris import DEFAULT_OC_LOG_LEVEL
+from osiris import get_oc_client
 
 from osiris.exceptions import OCError
 from osiris.exceptions import OCAuthenticationError
@@ -131,29 +132,21 @@ class _BuildLogsAggregator(ResultStorageBase):
         return build_info_pagination
 
     @staticmethod
-    def curl_build_log(build_id: str, namespace: str, log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
+    def get_build_log(build_id: str,
+                      namespace: str,
+                      log_level: int = DEFAULT_OC_LOG_LEVEL) -> str:
         """Curl OCP for build log for the given build.
 
         :raises OCError: In case of OC CLI failure.
         """
+        client = get_oc_client()
 
-        out, err, ret_code = execute_command("oc whoami")
+        logs = client.get_build_log(  # TODO: can log level be modified?
+            build_id=build_id,
+            namespace=namespace
+        )
 
-        if ret_code > 0:
-            raise OCAuthenticationError(
-                payload=err.decode('utf-8')
-            )
-
-        log_command = f"oc logs {build_id} " \
-                      f"--namespace {namespace} " \
-                      f"--loglevel {log_level}"
-
-        out, err, ret_code = execute_command(log_command)
-
-        if ret_code > 0:
-            raise OCError(ret_code, payload=err.decode('utf-8'))
-
-        return out.decode('utf-8')
+        return logs
 
 
 build_aggregator = _BuildLogsAggregator()
