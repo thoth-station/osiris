@@ -54,15 +54,13 @@ objects:
           resources: {}
           env:
           - name: FLASK_ENV
-            valueFrom:
-              configMapKeyRef:
-                key: FLASK_ENV
-                name: osiris
+            value: 'development'
+          - name: KUBERNETES_API_URL
+            value: 'https://kubernetes.default.svc.cluster.local'
           - name: KUBERNETES_VERIFY_TLS
-            valueFrom:
-              configMapKeyRef:
-                key: KUBERNETES_VERIFY_TLS
-                name: osiris
+            value: '0'
+          - name: MIDDLETIER_NAMESPACE
+            value: 'thoth-test-core'
           - name: OSIRIS_HOST_NAME
             valueFrom:
               configMapKeyRef:
