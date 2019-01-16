@@ -53,7 +53,7 @@ class BuildInfo(object):
         ocp = OCP.from_event(event)
 
         return cls(
-            build_id=build_id or f"{event.involved_object.name}-build",
+            build_id=build_id or event.involved_object.name,
             build_status=event.reason,
             first_timestamp=event.first_timestamp,
             last_timestamp=event.last_timestamp,
