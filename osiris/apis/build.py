@@ -140,9 +140,9 @@ class BuildInfoListingResource(Resource):
         """Paginate build information documents stored in Ceph."""
 
         schema = BuildInfoPaginationSchema()
-        page: BuildInfoPagination = build_aggregator.paginate_build_data(page)
+        paginated_data: BuildInfoPagination = build_aggregator.paginate_build_data(page)
 
-        return request_ok(payload=schema.dump(page))
+        return request_ok(payload=schema.dump(paginated_data))
 
 
 # logs
