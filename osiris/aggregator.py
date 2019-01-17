@@ -29,24 +29,30 @@ class _BuildLogsAggregator(ResultStorageBase):
     RESULT_TYPE = 'build_aggregator'
 
     __PAGINATION_TOKEN__ = None
+    __PAGINATION_COUNT__ = 0
     __COUNT__ = 0
 
     def __init__(self, *args, **kwargs):
 
         super(_BuildLogsAggregator, self).__init__(*args, **kwargs)
 
-    def connect(self):
-
-        super().connect()
+    def count(self):
+        """Get total number of documents in the Ceph storage."""
 
         # noinspection PyProtectedMember
-        _BuildLogsAggregator.__COUNT__ = sum(
+        return sum(
             1 for _ in
             self.ceph._s3.Bucket(self.ceph.bucket)  # pylint: disable=protected-access
                 .objects
                 .filter(Prefix=self.prefix)
                 .all()
         )
+
+    def connect(self):
+
+        super().connect()
+
+        _BuildLogsAggregator.__COUNT__ = self.count()
 
     def purge_build_data(self, prefix: str = None):
         """Purge build log documents stored in Ceph bucket.
@@ -95,6 +101,9 @@ class _BuildLogsAggregator(ResultStorageBase):
         """Paginate build information stored in Ceph."""
         if page == 1:
             # reset pagination
+            self.__COUNT__ = self.count()
+            self.__PAGINATION_COUNT__ = 0
+
             _BuildLogsAggregator.__PAGINATION_TOKEN__ = None
 
         result_list = []
@@ -116,17 +125,21 @@ class _BuildLogsAggregator(ResultStorageBase):
                 }
             )
 
-            for page in page_iterator:
-                for obj in page['Contents']:
+            for page_content in page_iterator:
+                for obj in page_content['Contents']:
                     _, key = obj['Key'].rsplit('/', 1)
 
                     result_list.append(self.ceph.retrieve_document(key))
 
                     _BuildLogsAggregator.__PAGINATION_TOKEN__ = page_iterator.resume_token
 
+            self.__PAGINATION_COUNT__ += len(result_list)
+
         build_info_pagination = BuildInfoPagination(
             result_list,
             total=self.__COUNT__,
+            has_next=self.__PAGINATION_COUNT__ < self.__COUNT__,
+            has_prev=page > 1  # assume that next pages wouldn't be shown otherwise
         )
 
         return build_info_pagination
