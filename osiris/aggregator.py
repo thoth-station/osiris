@@ -125,11 +125,18 @@ class _BuildLogsAggregator(ResultStorageBase):
                 }
             )
 
+            schema = BuildInfoSchema()
             for page_content in page_iterator:
                 for obj in page_content['Contents']:
                     _, key = obj['Key'].rsplit('/', 1)
 
-                    result_list.append(self.ceph.retrieve_document(key))
+                    data = self.ceph.retrieve_document(key)
+                    parsed_data, errors = schema.load(data).data
+
+                    result_list.append(
+                        # ignore validation errors here
+                        parsed_data
+                    )
 
                     _BuildLogsAggregator.__PAGINATION_TOKEN__ = page_iterator.resume_token
 
