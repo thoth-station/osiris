@@ -131,7 +131,7 @@ class _BuildLogsAggregator(ResultStorageBase):
                     _, key = obj['Key'].rsplit('/', 1)
 
                     data = self.ceph.retrieve_document(key)
-                    parsed_data, errors = schema.load(data).data
+                    parsed_data, errors = schema.load(data)
 
                     result_list.append(
                         # ignore validation errors here
