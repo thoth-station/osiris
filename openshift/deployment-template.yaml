@@ -21,7 +21,6 @@ objects:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    creationTimestamp: null
     labels:
       app: osiris
       component: osiris-api
@@ -37,7 +36,6 @@ objects:
       resources: {}
     template:
       metadata:
-        creationTimestamp: null
         labels:
           app: osiris
           component: osiris-api
@@ -116,7 +114,6 @@ objects:
   kind: Service
   metadata:
     name: osiris-api
-    creationTimestamp: null
     labels:
       app: osiris
       component: osiris-api
