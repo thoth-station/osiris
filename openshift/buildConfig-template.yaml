@@ -47,8 +47,12 @@ objects:
         sourceStrategy:
           from:
             kind: ImageStreamTag
-            name: python:latest
-            namespace: openshift
+            name: python-36-centos7:latest
+          env:
+            - name: ENABLE_PIPENV
+              value: '1'
+            - name: UPGRADE_PIP_TO_LATEST
+              value: ''
       triggers:
       - type: GitHub
         github:
@@ -62,7 +66,7 @@ parameters:
     displayName: Git Repository
     required: true
     name: GITHUB_URL
-    value: 'https://github.com/CermakM/osiris'
+    value: 'https://github.com/thoth-station/osiris'
 
   - description: Git reference to be used for Thoth's Osiris API
     displayName: Git Reference
