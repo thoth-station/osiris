@@ -1,6 +1,6 @@
 # Osiris: Build log aggregator.
 
-"""Namespace: build"""
+"""Namespace: build."""
 
 from http import HTTPStatus
 from typing import Union
@@ -97,7 +97,6 @@ class BuildStatusResource(Resource):
     # noinspection PyMethodMayBeStatic
     def get(self, build_id):
         """Return status of the given build."""
-
         _, build_info = build_aggregator.retrieve_build_data(build_id)
 
         return request_ok(payload={
@@ -120,7 +119,6 @@ class BuildInfoResource(Resource):
                   model=build_response)
     def get(self, build_id):
         """Return complete information stored about given build."""
-
         schema = BuildInfoSchema()
         _, build_info = build_aggregator.retrieve_build_data(build_id)
 
@@ -138,7 +136,6 @@ class BuildInfoListingResource(Resource):
                   )
     def get(self, page):
         """Paginate build information documents stored in Ceph."""
-
         schema = BuildInfoPaginationSchema()
         paginated_data: BuildInfoPagination = build_aggregator.paginate_build_data(page)
 
@@ -165,7 +162,6 @@ class BuildLogResource(Resource):
         ]})
     def get(self, build_id):
         """Return logs stored by the given build."""
-
         build_log, = build_aggregator.retrieve_build_data(build_id, log_only=True)
 
         # FIXME: return the whole doc or just the build log?
@@ -193,7 +189,6 @@ class BuildStartedResource(Resource):
     @api.expect(build_fields)
     def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build start hook."""
-
         # TODO: run all of the following ops asynchronously
         errors = {}
 

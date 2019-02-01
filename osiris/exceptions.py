@@ -10,6 +10,7 @@ class OCError(InternalServerError):
     """Exception raised on generic OC CLI failure."""
 
     def __init__(self, ret_code: int, payload=None, response=None):
+        """Initialize OCError class."""
         super(InternalServerError, self).__init__()
 
         self.ret_code = ret_code
@@ -33,6 +34,7 @@ class OCAuthenticationError(Unauthorized):
     """Exception raised on OC CLI failure."""
 
     def __init__(self, payload=None, response=None):
+        """Initialize OCAuthenticationError class."""
         super(Unauthorized, self).__init__()
 
         self.message = f"Client has not been authenticated"

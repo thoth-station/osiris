@@ -10,6 +10,7 @@ from osiris import DEFAULT_OC_PROJECT
 
 
 class Config(object):
+    """Config model."""
 
     def __init__(self, api_key: str, token: str, context: str = None, cluster: str = None,
                  namespace: str = None, host: str = None, port: str = None, url: str = None,
@@ -32,6 +33,7 @@ class Config(object):
 
 
 class ConfigSchema(Schema):
+    """Config model schema."""
 
     api_key = fields.Raw(required=True)
     token = fields.String(required=True)
@@ -53,5 +55,6 @@ class ConfigSchema(Schema):
     verify_ssl = fields.Bool(default=False)
 
     @post_load
-    def make_user(self, data: dict) -> Config:
+    def make_config(self, data: dict) -> Config:
+        """Make Config model from dictionary specification."""
         return Config(**data)

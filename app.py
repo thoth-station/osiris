@@ -58,7 +58,7 @@ def check_configuration():
 
 @app.after_request
 def log_request(response):
-
+    """Log request details after each request."""
     prefix = f"[{__APP_NAME__.upper()}]"
 
     app.logger.debug(f"{prefix} Request received.")
@@ -149,6 +149,7 @@ class APISchema(Resource):
 
     # noinspection PyMethodMayBeStatic
     def get(self):  # pragma: no cover
+        """Return complete API sChema specification."""
         return jsonify(api.__schema__)
 
 

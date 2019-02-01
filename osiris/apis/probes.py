@@ -1,6 +1,6 @@
 # Osiris: Build log aggregator.
 
-"""Namespace: probes"""
+"""Namespace: probes."""
 
 from http import HTTPStatus
 
@@ -35,6 +35,7 @@ class Readiness(Resource):
 
     Checks Ceph storage availability.
     """
+
     # noinspection PyMethodMayBeStatic
     @api.marshal_with(response)
     @api.doc(responses={

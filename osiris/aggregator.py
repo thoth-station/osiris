@@ -38,7 +38,6 @@ class _BuildLogsAggregator(ResultStorageBase):
 
     def count(self):
         """Get total number of documents in the Ceph storage."""
-
         # noinspection PyProtectedMember
         return sum(
             1 for _ in
@@ -57,7 +56,8 @@ class _BuildLogsAggregator(ResultStorageBase):
     def purge_build_data(self, prefix: str = None):
         """Purge build log documents stored in Ceph bucket.
 
-        [WARNING] All data from the bucket will be LOST!"""
+        [WARNING] All data from the bucket will be LOST!
+        """
         # noinspection PyProtectedMember
         bucket = self.ceph._s3.Bucket(self.ceph.bucket)
         # delete all objects in the bucket by the given prefix
