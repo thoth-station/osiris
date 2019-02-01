@@ -10,6 +10,7 @@ from marshmallow import Schema
 
 
 class OCP(object):
+    """OCP model."""
 
     def __init__(self,
                  kind: str = None,
@@ -41,6 +42,7 @@ class OCP(object):
 
 
 class OCPSchema(Schema):
+    """OCP model schema."""
 
     kind = fields.String(required=True)
 
@@ -51,4 +53,5 @@ class OCPSchema(Schema):
 
     @post_load
     def make_ocp(self, data: dict) -> OCP:
+        """Make OCP model from dictionary specification."""
         return OCP(**data)

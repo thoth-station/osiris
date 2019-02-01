@@ -19,13 +19,16 @@ from thoth.common.helpers import datetime2datetime_str
 
 
 class BuildLog(object):
+    """BuildLog model."""
 
     def __init__(self, raw: str):
+        """Initialize BuildLog model."""
 
         self.data = raw
 
 
 class BuildInfo(object):
+    """BuildInfo model."""
 
     def __init__(self,
                  build_id: str = None,
@@ -36,7 +39,7 @@ class BuildInfo(object):
                  first_timestamp: datetime = None,
                  last_timestamp: datetime = None,
                  log_level: int = None):
-
+        """Initialize BuildInfo model."""
         self.build_id = build_id
         self.build_status = build_status
 
@@ -52,7 +55,7 @@ class BuildInfo(object):
 
     @classmethod
     def from_event(cls, event: Event, build_id: str = None, **kwargs):
-
+        """Create BuildInfo model from kubernetes event."""
         ocp = OCP.from_event(event)
 
         return cls(
@@ -65,10 +68,14 @@ class BuildInfo(object):
         )
 
     def build_complete(self) -> bool:
+        """Return whether build has completed.
+        
+        Failed builds are considered completed, too."""
         return self.build_status == 'BuildCompleted' or self.build_status == 'BuildFailed'
 
 
 class BuildInfoSchema(Schema):
+    """BuildInfo model schema."""
 
     build_id = fields.String(required=True)
     build_status = fields.String(required=True)
@@ -85,10 +92,12 @@ class BuildInfoSchema(Schema):
 
     @post_load
     def make_build_info(self, data: dict) -> BuildInfo:
+        """Make BuildInfo model from dictionary specification."""
         return BuildInfo(**data)
 
 
 class BuildInfoPagination(object):
+    """BuildInfoPagination model."""
 
     RESULTS_PER_PAGE = 20
 
@@ -97,7 +106,7 @@ class BuildInfoPagination(object):
                  total: int = None,
                  has_next: bool = None,
                  has_prev: bool = None):
-
+        """Initialize BuildInfoPagination model."""
         self.build_info = build_info_list
 
         self.total = total
@@ -106,6 +115,7 @@ class BuildInfoPagination(object):
 
 
 class BuildInfoPaginationSchema(Schema):
+    """BuildInfoPagination model schema."""
 
     build_info = fields.Nested(BuildInfoSchema, many=True)
 

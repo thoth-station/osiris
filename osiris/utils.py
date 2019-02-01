@@ -14,6 +14,7 @@ from osiris.exceptions import OCAuthenticationError
 
 
 def oc_authentication_required(f):
+    """Wrap endpoint which requires authentication."""
     @wraps(f)
     def inner(*args, **kwargs):
         out, _, ret_code = execute_command("oc whoami")
@@ -49,7 +50,6 @@ def execute_command(command: str) -> tuple:
 
 def suppress_exception(exc_type=Exception):
     """Suppress exception."""
-
     def _wrapper(fun: typing.Callable):
 
         def _inner(*args, **kwargs):
@@ -71,7 +71,6 @@ def suppress_exception(exc_type=Exception):
 
 def noexcept(fun: typing.Callable):
     """Decorate non-throwing function."""
-
     def _inner(*args, **kwargs):
 
         ret = None
