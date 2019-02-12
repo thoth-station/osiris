@@ -41,8 +41,5 @@ setup(
     ],
     packages=find_packages(exclude=["tests"]),
 
-    install_requires=REQUIREMENTS,
-    dependency_links=[
-        "git+https://github.com/thoth-station/common.git@master#egg=thoth-common"
-    ]
+    install_requires=REQUIREMENTS
 )
