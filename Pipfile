@@ -6,11 +6,10 @@ name = "pypi"
 [packages]
 flask-restplus = "*"
 marshmallow = "*"
-requests = "*"
-thoth-storages = "*"
-amun = "*"
 openshift = "*"
-thoth-common = {git = "https://github.com/thoth-station/common.git"}
+requests = "*"
+thoth-common = "*"
+thoth-storages = "*"
 
 [dev-packages]
 pytest = "*"
