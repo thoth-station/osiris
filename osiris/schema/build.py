@@ -14,9 +14,6 @@ from osiris.schema.ocp import OCP, OCPSchema
 
 from kubernetes.client.models.v1_event import V1Event as Event
 
-from thoth.common.helpers import _DATETIME_FORMAT_STRING
-from thoth.common.helpers import datetime2datetime_str
-
 
 class BuildLog(object):
     """BuildLog model."""
