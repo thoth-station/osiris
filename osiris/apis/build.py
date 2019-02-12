@@ -12,6 +12,9 @@ from flask_restplus import fields
 from flask_restplus import Namespace
 from flask_restplus import Resource
 
+from kubernetes.client import ApiClient
+from kubernetes.client.models.v1_event import V1Event
+
 from marshmallow import ValidationError
 
 from osiris import DEFAULT_OC_LOG_LEVEL
@@ -33,6 +36,9 @@ from werkzeug.exceptions import HTTPException, InternalServerError
 
 
 api = Namespace(name='build', description="Namespace for build triggers.")
+
+# kubernetes client
+kube_client = ApiClient()
 
 
 @api.errorhandler(OCError)
@@ -187,6 +193,14 @@ class BuildStartedResource(Resource):
                               " or missing build identification."
                   )
     @api.expect(build_fields)
+    @api.doc(params=dict(
+        schema="""
+        Schema of the data provided. ['default', 'event'].
+        Use 'event' if provided data schema resembles Kubernetes Event schema.
+        
+        By default this endpoint expects BuildInfoSchema.
+        """
+    ))
     def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build start hook."""
         # TODO: run all of the following ops asynchronously
@@ -194,12 +208,17 @@ class BuildStartedResource(Resource):
 
         build_schema = BuildInfoSchema()
         build_data: dict = request.json
-        build_data['build_log'] = None
 
         if not any([build_data, build_id]):
             errors['build_data'] = "Invalid or missing build data."
 
-        validation_errors = build_schema.validate(build_data)
+        if request.args.get('schema', default='default') == 'event':
+            event: V1Event = kube_client.deserialize(request, response_type='V1Event')
+            build_data, validation_errors = BuildInfoSchema().dump(
+                BuildInfo.from_event(event)
+            )
+        else:
+            validation_errors = build_schema.validate(build_data)
 
         if validation_errors.get('build_id', None) and not build_id:
             # build_id is not provided at all
@@ -207,6 +226,7 @@ class BuildStartedResource(Resource):
 
         if not errors:  # validation errors other than build_id are permitted for now
             # store in Ceph
+            build_data['build_log'] = None
             build_aggregator.store_build_data(build_data)
 
             return request_accepted(errors=validation_errors)
@@ -237,6 +257,14 @@ class BuildCompletedResource(Resource):
                               " or missing build identification."
                   )
     @api.expect(build_fields)
+    @api.doc(params=dict(
+        schema="""
+        Schema of the data provided. ['default', 'event'].
+        Use 'event' if provided data schema resembles Kubernetes Event schema.
+        
+        By default this endpoint expects BuildInfoSchema.
+        """
+    ))
     def put(self, build_id: str = None):  # pragma: no cover
         """Trigger build completion hook."""
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
@@ -249,6 +277,13 @@ class BuildCompletedResource(Resource):
         build_schema = BuildInfoSchema()
 
         build_data: dict = request.json
+
+        if request.args.get('schema', default='default') == 'event':
+            event: V1Event = kube_client.deserialize(request, response_type='V1Event')
+            build_data, _ = BuildInfoSchema().dump(
+                BuildInfo.from_event(event)
+            )
+
         build_info.build_status = build_data['build_status']
         build_info.build_log_url = url_for(
             'build_build_log_resource', build_id=build_id, _external=True)
