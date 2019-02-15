@@ -15,15 +15,6 @@ from osiris.schema.ocp import OCP, OCPSchema
 from kubernetes.client.models.v1_event import V1Event as Event
 
 
-class BuildLog(object):
-    """BuildLog model."""
-
-    def __init__(self, raw: str):
-        """Initialize BuildLog model."""
-
-        self.data = raw
-
-
 class BuildInfo(object):
     """BuildInfo model."""
 
@@ -69,6 +60,15 @@ class BuildInfo(object):
         
         Failed builds are considered completed, too."""
         return self.build_status == 'BuildCompleted' or self.build_status == 'BuildFailed'
+
+
+class BuildLog(object):
+    """BuildLog model."""
+
+    def __init__(self, data: str, metadata: dict = None):
+        """Initialize BuildLog model."""
+        self.data = data
+        self.metadata = metadata
 
 
 class BuildInfoSchema(Schema):
@@ -119,3 +119,10 @@ class BuildInfoPaginationSchema(Schema):
     total = fields.Integer(required=True)
     has_next = fields.Bool(required=False, default=False)
     has_prev = fields.Bool(required=False, default=False)
+
+
+class BuildLogSchema(Schema):
+    """BuildLog model schema."""
+
+    data = fields.String(required=True)
+    metadata = fields.Raw(required=False)

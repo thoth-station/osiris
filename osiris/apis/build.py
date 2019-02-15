@@ -27,7 +27,7 @@ from osiris.response import request_accepted
 from osiris.response import request_ok
 from osiris.response import bad_request
 
-from osiris.schema.build import BuildInfo, BuildInfoSchema
+from osiris.schema.build import BuildInfo, BuildInfoSchema, BuildLog, BuildLogSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 from osiris.exceptions import OCError
@@ -90,6 +90,21 @@ build_fields = api.model('build_fields', {
 
 build_response = api.inherit('build_response', response, {
     'payload': fields.Nested(build_fields)
+})
+
+build_log_fields = api.model('build_log_fields', {
+    'data': fields.String(
+        required=True,
+        description="Build log data."
+    ),
+    'metadata': fields.Raw(
+        required=False,
+        description="Build log metadata."
+    )
+})
+
+build_log_response = api.inherit('build_response', response, {
+    'payload': fields.Nested(build_log_fields)
 })
 
 
@@ -170,10 +185,57 @@ class BuildLogResource(Resource):
         """Return logs stored by the given build."""
         build_log, = build_aggregator.retrieve_build_data(build_id, log_only=True)
 
-        # FIXME: return the whole doc or just the build log?
+        # TODO: return the whole doc or just the build log?
         return request_ok(
             payload=build_log
         )
+
+    @api.param(name='force', description="Force overwrite stored document.")
+    @api.response(code=HTTPStatus.ACCEPTED,
+                  description="Request has been accepted."
+                              "Document will be stored in Ceph",
+                  )
+    @api.response(code=HTTPStatus.BAD_REQUEST,
+                  description="Request could not be processed due to invalid data"
+                              " or missing build identification."
+                  )
+    @api.expect(build_log_fields)
+    def put(self, build_id):
+        """Store logs for the given build in Ceph."""
+        build_log, build_info = build_aggregator.retrieve_build_data(build_id)
+
+        if build_log is not None and request.args.get('force', 'false') != 'true':
+
+            return bad_request(
+                errors={
+                    'BuildLogExists': "Build log already exists and `force` is not specified."
+                }
+            )
+
+        build_doc, _ = BuildInfoSchema().dump(build_info)
+
+        build_log_schema = BuildLogSchema()
+        build_log, validation_errors = build_log_schema.load(request.json)
+
+        if not build_info.build_complete():
+            resp = bad_request(
+                errors={
+                    'BuildNotCompleted': "Build has not been completed yet.",
+                },
+                validation_errors=validation_errors
+            )
+
+        else:
+            if 'build_id' not in build_log['metadata']:
+                build_log['metadata']['build_id'] = build_id
+
+            build_doc['build_log'] = build_log
+
+            build_aggregator.store_build_data(build_doc)
+
+            resp = request_ok()
+
+        return resp
 
 
 # triggers
@@ -283,7 +345,8 @@ class BuildCompletedResource(Resource):
         log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
 
         build_data: dict = request.json
-        validation_errors = _on_build_completed(build_id, build_data, log_level)
+        validation_errors = _on_build_completed(
+            build_id, build_data, get_build_log=request.args.mode == 'cluster', log_level=log_level)
 
         return request_accepted(errors=validation_errors)
 
@@ -321,12 +384,17 @@ class BuildCompletedEventResource(Resource):
             BuildInfo.from_event(event, build_id)
         )
 
-        validation_errors = _on_build_completed(build_id, build_data, log_level)
+        # TODO: handle validation errors
+        validation_errors = _on_build_completed(
+            build_id, build_data, get_build_log=request.args.mode == 'cluster', log_level=log_level)
 
         return request_accepted(errors=validation_errors)
 
 
-def _on_build_completed(build_id: str, build_data: dict, log_level: int = DEFAULT_OC_LOG_LEVEL):
+def _on_build_completed(build_id: str,
+                        build_data: dict,
+                        get_build_log=False,
+                        log_level: int = DEFAULT_OC_LOG_LEVEL):
     """Update Ceph build data.
 
     :returns: validation errors produced by BuildInfoSchema schema validation.
@@ -341,16 +409,17 @@ def _on_build_completed(build_id: str, build_data: dict, log_level: int = DEFAUL
     build_info.build_log_url = url_for(
         'build_build_log_resource', build_id=build_id, _external=True)
 
-    # get build log
-    build_log: str = build_aggregator.get_build_log(
-        build_id,
-        namespace=build_info.ocp_info.namespace,
-        log_level=log_level
-    )
-
-    # TODO: handle validation errors
     build_doc, validation_errors = build_schema.dump(build_info)
-    build_doc['build_log'] = build_log
+
+    if get_build_log:
+        # get build log from relevant pod (requires OpenShift authentication)
+        build_log: str = build_aggregator.get_build_log(
+            build_id,
+            namespace=build_info.ocp_info.namespace,
+            log_level=log_level
+        )
+
+        build_doc['build_log'] = build_log
 
     # store in Ceph
     build_aggregator.store_build_data(build_doc)
