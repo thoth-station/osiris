@@ -18,16 +18,13 @@ from kubernetes.client.models.v1_event import V1Event
 from marshmallow import ValidationError
 
 from osiris import DEFAULT_OC_LOG_LEVEL
-
 from osiris.aggregator import build_aggregator
-
 from osiris.apis.model import response
-
 from osiris.response import request_accepted
 from osiris.response import request_ok
 from osiris.response import bad_request
 
-from osiris.schema.build import BuildInfo, BuildInfoSchema, BuildLog, BuildLogSchema
+from osiris.schema.build import BuildInfo, BuildInfoSchema, BuildLogSchema
 from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 from osiris.exceptions import OCError
@@ -36,9 +33,6 @@ from werkzeug.exceptions import HTTPException, InternalServerError
 
 
 api = Namespace(name='build', description="Namespace for build triggers.")
-
-# kubernetes client
-kube_client = ApiClient()
 
 
 @api.errorhandler(OCError)
@@ -190,7 +184,7 @@ class BuildLogResource(Resource):
             payload=build_log
         )
 
-    @api.param(name='force', description="Force overwrite stored document.")
+    @api.param(name='force', description="Overwrite existing logs (default 1).")
     @api.response(code=HTTPStatus.ACCEPTED,
                   description="Request has been accepted."
                               "Document will be stored in Ceph",
@@ -204,11 +198,12 @@ class BuildLogResource(Resource):
         """Store logs for the given build in Ceph."""
         build_log, build_info = build_aggregator.retrieve_build_data(build_id)
 
-        if build_log is not None and request.args.get('force', 'false') != 'true':
+        if build_log is not None and not int(request.args.get('force', 1)):
 
             return bad_request(
                 errors={
-                    'BuildLogExists': "Build log already exists and `force` is not specified."
+                    'BuildLogExists': f"Build log `{build_id}` already exists"
+                                      " and `force` is not specified."
                 }
             )
 
@@ -284,7 +279,6 @@ class BuildStartedResource(Resource):
             return bad_request(errors=errors)
 
 
-@api.route('/started/<string:build_id>')
 @api.route('/started/event_schema/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildStartedEventResource(Resource):
@@ -306,9 +300,44 @@ class BuildStartedEventResource(Resource):
         """Trigger build start hook."""
         build_schema = BuildInfoSchema()
 
+        kube_client = ApiClient()
+
         event: V1Event = kube_client.deserialize(request, response_type='V1Event')
         build_data, validation_errors = build_schema.dump(
             BuildInfo.from_event(event, build_id)
+        )
+
+        # store in Ceph
+        build_data['build_log'] = None
+        build_aggregator.store_build_data(build_data)
+
+        return request_accepted(errors=validation_errors)
+
+
+@api.route('/started/<string:build_id>')
+@api.route('/started/thoth_schema/<string:build_id>')
+@api.param('build_id', 'Unique build identification.')
+class BuildStartedEventResource(Resource):
+    """Receiver hook for started builds.
+
+    This endpoint expects data as returned by Thoth OpenShift API.
+    """
+
+    # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.ACCEPTED,
+                  description="Request has been accepted."
+                              "Document will be stored in Ceph",
+                  )
+    @api.response(code=HTTPStatus.BAD_REQUEST,
+                  description="Request could not be processed due to invalid data"
+                              " or missing build identification."
+                  )
+    def put(self, build_id: str = None):  # pragma: no cover
+        """Trigger build start hook."""
+        build_schema = BuildInfoSchema()
+
+        build_data, validation_errors = build_schema.dump(
+            BuildInfo.from_resource(request.json, build_id)
         )
 
         # store in Ceph
@@ -346,12 +375,11 @@ class BuildCompletedResource(Resource):
 
         build_data: dict = request.json
         validation_errors = _on_build_completed(
-            build_id, build_data, get_build_log=request.args.mode == 'cluster', log_level=log_level)
+            build_id, build_data, get_build_log=request.args.get('mode', 'remote') == 'cluster', log_level=log_level)
 
         return request_accepted(errors=validation_errors)
 
 
-@api.route('/completed/<string:build_id>')
 @api.route('/completed/event_schema/<string:build_id>')
 @api.param('build_id', 'Unique build identification.')
 class BuildCompletedEventResource(Resource):
@@ -379,6 +407,8 @@ class BuildCompletedEventResource(Resource):
 
         build_schema = BuildInfoSchema()
 
+        kube_client = ApiClient()
+
         event: V1Event = kube_client.deserialize(request, response_type='V1Event')
         build_data, _ = build_schema.dump(
             BuildInfo.from_event(event, build_id)
@@ -386,7 +416,46 @@ class BuildCompletedEventResource(Resource):
 
         # TODO: handle validation errors
         validation_errors = _on_build_completed(
-            build_id, build_data, get_build_log=request.args.mode == 'cluster', log_level=log_level)
+            build_id, build_data, get_build_log=request.args.get('mode', 'remote') == 'cluster', log_level=log_level)
+
+        return request_accepted(errors=validation_errors)
+
+
+@api.route('/completed/<string:build_id>')
+@api.route('/completed/thoth_schema/<string:build_id>')
+@api.param('build_id', 'Unique build identification.')
+class BuildCompletedThothResource(Resource):
+    """Receiver hook for completed builds.
+
+    When the build is marked completed and this endpoint
+    is triggered, the aggregator will automatically gather
+    logs for the given build.
+
+    This endpoint expects data as returned by Thoth OpenShift API.
+    """
+
+    # noinspection PyMethodMayBeStatic
+    @api.response(code=HTTPStatus.ACCEPTED,
+                  description="Request has been accepted."
+                              "Document will be stored in Ceph",
+                  )
+    @api.response(code=HTTPStatus.BAD_REQUEST,
+                  description="Request could not be processed due to invalid data"
+                              " or missing build identification."
+                  )
+    def put(self, build_id: str = None):  # pragma: no cover
+        """Trigger build completion hook."""
+        log_level: int = request.args.get('log_level', DEFAULT_OC_LOG_LEVEL)
+
+        build_schema = BuildInfoSchema()
+
+        build_data, _ = build_schema.dump(
+            BuildInfo.from_resource(request.json, build_id)
+        )
+
+        # TODO: handle validation errors
+        validation_errors = _on_build_completed(
+            build_id, build_data, get_build_log=request.args.get('mode', 'remote') == 'cluster', log_level=log_level)
 
         return request_accepted(errors=validation_errors)
 
