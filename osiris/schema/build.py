@@ -2,8 +2,10 @@
 
 """Build API schema."""
 
+import re
+
 from datetime import datetime
-from typing import List
+from typing import List, Union
 
 from marshmallow import fields
 from marshmallow import post_load
@@ -13,6 +15,9 @@ from osiris import DEFAULT_OC_LOG_LEVEL
 from osiris.schema.ocp import OCP, OCPSchema
 
 from kubernetes.client.models.v1_event import V1Event as Event
+from openshift.dynamic.client import ResourceInstance
+
+from thoth.common.helpers import _DATETIME_FORMAT_STRING  # noqa
 
 
 class BuildInfo(object):
@@ -55,11 +60,37 @@ class BuildInfo(object):
             **kwargs
         )
 
+    @classmethod
+    def from_resource(cls, resource: Union[dict, ResourceInstance], build_id: str = None, **kwargs):
+        """Create BuildInfo model from kubernetes event."""
+        ocp = OCP.from_resource(resource)
+
+        metadata = resource['metadata']
+        status = resource['status']
+
+        datetime_fmt = "%Y-%m-%dT%H:%M:%SZ"
+        try:  # might be missing if build is in Pending state
+            start_ts = datetime.strptime(status['startTimestamp'], datetime_fmt)
+            end_ts = datetime.strptime(status['completionTimestamp'], datetime_fmt)
+        except KeyError:
+            start_ts = None
+            end_ts = None
+
+        return cls(
+            build_id=build_id or metadata['name'],
+            build_status=status['phase'],
+            # TODO: use `format_datetime` from thoth.common when available in PyPI
+            first_timestamp=start_ts,
+            last_timestamp=end_ts,
+            ocp_info=ocp,
+            **kwargs
+        )
+
     def build_complete(self) -> bool:
         """Return whether build has completed.
         
         Failed builds are considered completed, too."""
-        return self.build_status == 'BuildCompleted' or self.build_status == 'BuildFailed'
+        return bool(re.match(r"complete|fail", self.build_status, re.IGNORECASE))
 
 
 class BuildLog(object):
@@ -82,8 +113,8 @@ class BuildInfoSchema(Schema):
 
     ocp_info = fields.Nested(OCPSchema, required=False)
 
-    first_timestamp = fields.DateTime(required=False)
-    last_timestamp = fields.DateTime(required=False)
+    first_timestamp = fields.DateTime(required=False, format=_DATETIME_FORMAT_STRING)
+    last_timestamp = fields.DateTime(required=False, format=_DATETIME_FORMAT_STRING)
 
     log_level = fields.Integer(required=False)
 

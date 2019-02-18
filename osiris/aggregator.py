@@ -88,12 +88,12 @@ class _BuildLogsAggregator(ResultStorageBase):
         if isinstance(build_log_data, dict):
             build_log = BuildLog(**build_log_data)
         else:
-            build_log = BuildLog(raw=build_log_data)
+            build_log = BuildLog(data=build_log_data)
 
         ret: tuple = (build_log, )
 
         if not log_only:
-            build_info, _ = BuildInfoSchema().load(build_doc)
+            build_info = BuildInfo(**BuildInfoSchema().load(build_doc).data)
 
             ret = build_log, build_info
 
