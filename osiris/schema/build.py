@@ -88,8 +88,9 @@ class BuildInfo(object):
 
     def build_complete(self) -> bool:
         """Return whether build has completed.
-        
-        Failed builds are considered completed, too."""
+
+        Failed builds are considered completed, too.
+        """
         return bool(re.match(r"complete|fail", self.build_status, re.IGNORECASE))
 
 
