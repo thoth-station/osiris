@@ -15,7 +15,7 @@ class OCP(object):
                  name: str = None,
                  namespace: str = None,
                  self_link: str = None):
-
+        """Initialize OCP model."""
         self.kind = kind
 
         self.name = name
@@ -25,6 +25,7 @@ class OCP(object):
 
     @classmethod
     def from_event(cls, event: "V1Event"):
+        """Construct class from Kubernetes V1Event."""
         kind = event.involved_object.kind
         name = event.involved_object.name
         namespace = event.involved_object.namespace
@@ -40,6 +41,7 @@ class OCP(object):
 
     @classmethod
     def from_resource(cls, resource: "ResourceInstance"):
+        """Construct class from OpenShift ResourceInstance."""
         metadata = resource['metadata']
 
         kind = resource['kind']
