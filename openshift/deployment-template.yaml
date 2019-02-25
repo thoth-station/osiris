@@ -65,16 +65,6 @@ objects:
                   value: '0'
                 - name: MIDDLETIER_NAMESPACE
                   value: 'thoth-test-core'
-                - name: OSIRIS_HOST_NAME
-                  valueFrom:
-                    configMapKeyRef:
-                      key: OSIRIS_HOST_NAME
-                      name: osiris
-                - name: OSIRIS_HOST_PORT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: OSIRIS_HOST_PORT
-                      name: osiris
                 - name: THOTH_S3_ENDPOINT_URL
                   valueFrom:
                     configMapKeyRef:
