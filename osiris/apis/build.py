@@ -29,6 +29,8 @@ from osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 from osiris.exceptions import OCError
 
+from thoth.storages.exceptions import NotFoundError
+
 from werkzeug.exceptions import HTTPException, InternalServerError
 
 
@@ -472,9 +474,16 @@ def _on_build_completed(build_id: str,
     build_schema = BuildInfoSchema()
 
     build_info: BuildInfo
-    _, build_info = build_aggregator.retrieve_build_data(build_id)
+    try:
+        _, build_info = build_aggregator.retrieve_build_data(build_id)
 
-    build_info.build_status = build_data['build_status']
+        build_info.build_status = build_data['build_status']
+    except NotFoundError:
+        # store the document even if there is no previous build started record
+        # this can happen if the observer is deployed into running environment
+        build_info = BuildInfo(build_id=build_data.pop('build_id', build_id),
+                               **build_data)
+
     build_info.build_log_url = url_for(
         'build_build_log_resource', build_id=build_id, _external=True)
 
