@@ -93,7 +93,7 @@ class _BuildLogsAggregator(ResultStorageBase):
         ret: tuple = (build_log, )
 
         if not log_only:
-            build_info = BuildInfo(**BuildInfoSchema().load(build_doc).data)
+            build_info = BuildInfoSchema().load(build_doc).data
 
             ret = build_log, build_info
 
