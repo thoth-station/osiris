@@ -91,7 +91,7 @@ class BuildInfo(object):
 
         Failed builds are considered completed, too.
         """
-        return bool(re.match(r"complete|fail", self.build_status, re.IGNORECASE))
+        return bool(re.match(r"complete|fail|unknown", self.build_status, re.IGNORECASE))
 
 
 class BuildLog(object):

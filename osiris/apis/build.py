@@ -198,16 +198,21 @@ class BuildLogResource(Resource):
     @api.expect(build_log_fields)
     def put(self, build_id):
         """Store logs for the given build in Ceph."""
-        build_log, build_info = build_aggregator.retrieve_build_data(build_id)
+        try:
+            build_log, build_info = build_aggregator.retrieve_build_data(build_id)
 
-        if build_log is not None and not int(request.args.get('force', 1)):
+            if build_log is not None and not int(request.args.get('force', 1)):
 
-            return bad_request(
-                errors={
-                    'BuildLogExists': f"Build log `{build_id}` already exists"
-                                      " and `force` is not specified."
-                }
-            )
+                return bad_request(
+                    errors={
+                        'BuildLogExists': f"Build log `{build_id}` already exists"
+                                          " and `force` is not specified."
+                    }
+                )
+
+        except NotFoundError:
+            # create the entry anyway without any metadata
+            build_info = BuildInfo(build_id=build_id, build_status='Unknown')
 
         build_doc, _ = BuildInfoSchema().dump(build_info)
 
@@ -474,16 +479,9 @@ def _on_build_completed(build_id: str,
     build_schema = BuildInfoSchema()
 
     build_info: BuildInfo
-    try:
-        _, build_info = build_aggregator.retrieve_build_data(build_id)
+    build_data.update({'build_id': build_id})
 
-        build_info.build_status = build_data['build_status']
-    except NotFoundError:
-        # store the document even if there is no previous build started record
-        # this can happen if the observer is deployed into running environment
-        build_data.update({'build_id': build_id})
-        build_info = build_schema.load(build_data)
-
+    build_info = build_schema.load(build_data).data
     build_info.build_log_url = url_for(
         'build_build_log_resource', build_id=build_id, _external=True)
 
