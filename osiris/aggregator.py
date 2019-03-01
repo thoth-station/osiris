@@ -83,7 +83,7 @@ class _BuildLogsAggregator(ResultStorageBase):
 
         build_doc: dict = self.ceph.retrieve_document(document_id)
 
-        build_log_data = build_doc.pop('build_log')
+        build_log_data = build_doc.pop('build_log', None)
 
         if isinstance(build_log_data, dict):
             build_log = BuildLog(**build_log_data)
