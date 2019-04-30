@@ -391,10 +391,10 @@
         },
         "openshift": {
             "hashes": [
-                "sha256:0e6a9f6ffc0b127794dce9f4ea658f055d3df5699bec3d2ee89a4a53431bad99"
+                "sha256:54d715ce5c97c870193bd9e046aec7f0d3fa91415566bdb2e5387db80dafb3c8"
             ],
             "index": "pypi",
-            "version": "==0.8.4"
+            "version": "==0.8.8"
         },
         "pexpect": {
             "hashes": [
