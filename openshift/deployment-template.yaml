@@ -7,14 +7,14 @@ metadata:
       This is Osiris API DeploymentConfig Template.
     openshift.io/display-name: 'Thoth: Osiris API'
     version: 0.1.0
-    tags: ai-stacks,aistacks,build,build-aggregator,build-analysis,thoth,osiris,osiris-api
+    tags: ai-stacks,build-aggregator,build-analysis,thoth,osiris,osiris-api
     template.openshift.io/documentation-url: https://github.com/Thoth-Station/
     template.openshift.io/long-description: >
       This is Osiris API DeploymentConfig Template.
     template.openshift.io/provider-display-name: Red Hat, Inc.
   labels:
     template: osiris-api-deploymentconfig
-    app: osiris
+    app: thoth
     component: osiris-api
 
 objects:
@@ -22,113 +22,220 @@ objects:
     kind: DeploymentConfig
     metadata:
       labels:
-        app: osiris
+        app: thoth
         component: osiris-api
       name: osiris-api
     spec:
       replicas: 1
       selector:
-        app: osiris
+        app: thoth
         component: osiris-api
-        deploymentconfig: osiris-api
         service: osiris-api
       strategy:
         resources: {}
       template:
         metadata:
           labels:
-            app: osiris
+            app: thoth
             component: osiris-api
-            deploymentconfig: osiris-api
             service: osiris-api
         spec:
-          serviceAccountName: analyzer
+          serviceAccountName: osiris
           containers:
             - image: osiris-api:latest
               name: osiris-api
               ports:
-                - containerPort: 5000
+                - containerPort: 8000
                   protocol: TCP
               resources:
                 requests:
-                  memory: "384Mi"
+                  memory: "512Mi"
                   cpu: "125m"
                 limits:
-                  memory: "384Mi"
+                  memory: "512Mi"
                   cpu: "500m"
+              readinessProbe:
+                httpGet:
+                  path: "/readiness"
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                timeoutSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: "/liveness"
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 5
+                periodSeconds: 60
+                timeoutSeconds: 10
               env:
+                - name: APP_MODULE
+                  value: "thoth.osiris.openapi_server:app"
                 - name: FLASK_ENV
                   value: 'development'
                 - name: KUBERNETES_API_URL
                   value: 'https://kubernetes.default.svc.cluster.local'
                 - name: KUBERNETES_VERIFY_TLS
                   value: '0'
-                - name: MIDDLETIER_NAMESPACE
-                  value: 'thoth-test-core'
+                - name: OSIRIS_API_APP_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: app-secret-key
+                      name: thoth
+                - name: SENTRY_DSN
+                  valueFrom:
+                    secretKeyRef:
+                      key: sentry-dsn
+                      name: thoth
+                - name: THOTH_MIDDLETIER_NAMESPACE
+                  valueFrom:
+                    configMapKeyRef:
+                      key: middletier-namespace
+                      name: thoth
+                - name: THOTH_BACKEND_NAMESPACE
+                  valueFrom:
+                    configMapKeyRef:
+                      key: backend-namespace
+                      name: thoth
                 - name: THOTH_S3_ENDPOINT_URL
                   valueFrom:
                     configMapKeyRef:
-                      key: THOTH_S3_ENDPOINT_URL
-                      name: osiris
+                      key: ceph-host
+                      name: thoth
                 - name: THOTH_CEPH_KEY_ID
                   valueFrom:
-                    configMapKeyRef:
-                      key: THOTH_CEPH_KEY_ID
-                      name: osiris
+                    secretKeyRef:
+                      key: ceph-key-id
+                      name: thoth
                 - name: THOTH_CEPH_SECRET_KEY
                   valueFrom:
-                    configMapKeyRef:
-                      key: THOTH_CEPH_SECRET_KEY
-                      name: osiris
+                    secretKeyRef:
+                      key: ceph-secret-key
+                      name: thoth
                 - name: THOTH_CEPH_BUCKET
                   valueFrom:
                     configMapKeyRef:
-                      key: THOTH_CEPH_BUCKET
-                      name: osiris
+                      key: ceph-bucket-name
+                      name: thoth
                 - name: THOTH_DEPLOYMENT_NAME
                   valueFrom:
                     configMapKeyRef:
-                      key: THOTH_DEPLOYMENT_NAME
-                      name: osiris
+                      key: storage-bucket-name
+                      name: thoth
                 - name: THOTH_CEPH_BUCKET_PREFIX
                   valueFrom:
                     configMapKeyRef:
-                      key: THOTH_CEPH_BUCKET_PREFIX
-                      name: osiris
+                      key: ceph-bucket-prefix
+                      name: thoth
+            # - name: osiris-grpc
+            #   image: osiris-api:latest
+            #   env:
+            #     - name: APP_FILE
+            #       value: "thoth/osiris/grpc_server.py"
+            #     - name: OSIRIS_API_APP_SECRET_KEY
+            #       valueFrom:
+            #         secretKeyRef:
+            #           key: app-secret-key
+            #           name: thoth
+            #     # - name: SENTRY_DSN
+            #     #   valueFrom:
+            #     #     secretKeyRef:
+            #     #       key: sentry-dsn
+            #     #       name: thoth
+            #   ports:
+            #     - containerPort: 8443
+            #       protocol: TCP
+            #   resources:
+            #     requests:
+            #       memory: "384Mi"
+            #       cpu: "125m"
+            #     limits:
+            #       memory: "384Mi"
+            #       cpu: "500m"
+            #   volumeMounts:
+            #     - mountPath: /opt/app-root/src/certs
+            #       name: osiris-grpc-tls
+            #       readOnly: true
+          volumes:
+            - name: osiris-grpc-tls
+              secret:
+                defaultMode: 420
+                secretName: osiris-grpc
       triggers:
         - type: ConfigChange
         - type: ImageChange
           imageChangeParams:
             containerNames:
               - osiris-api
+              - osiris-grpc
             automatic: true
             from:
               kind: ImageStreamTag
               name: osiris-api:latest
 
-  - apiVersion: v1
-    kind: Service
+  - kind: Service
+    apiVersion: v1
     metadata:
-      name: osiris-api
       labels:
-        app: osiris
+        app: thoth
         component: osiris-api
+      name: osiris-openapi
     spec:
       ports:
-        - port: 5000
+        - name: http
+          port: 8000
           protocol: TCP
-          targetPort: 5000
+          targetPort: 8080
       selector:
         service: osiris-api
 
-  - apiVersion: v1
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      labels:
+        app: thoth
+        component: osiris-api
+      name: osiris-grpc
+    spec:
+      type: ClusterIP
+      ports:
+        - name: grpc
+          port: 8443
+          protocol: TCP
+          targetPort: 8443
+      selector:
+        service: osiris-api
+
+  - apiVersion: route.openshift.io/v1
     kind: Route
     metadata:
-      name: osiris-api
+      name: osiris-openapi
       labels:
-        app: osiris
+        app: thoth
         component: osiris-api
     spec:
+      port:
+        targetPort: http
       to:
         kind: Service
-        name: osiris-api
+        name: osiris-openapi
+
+  - kind: Route
+    apiVersion: route.openshift.io/v1
+    metadata:
+      labels:
+        app: thoth
+        component: osiris-api
+      name: osiris-grpc
+    spec:
+      port:
+        targetPort: grpc
+      tls:
+        termination: passthrough
+      to:
+        kind: Service
+        name: osiris-grpc
+        weight: 100
+      wildcardPolicy: None

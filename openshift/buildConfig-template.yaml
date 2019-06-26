@@ -5,16 +5,16 @@ metadata:
   annotations:
     description: >
       This is Osiris API BuildConfig Template.
-    openshift.io/display-name: 'Thoth: Osiris API - BuildConfig'
+    openshift.io/display-name: Thoth:Osiris API - BuildConfig
     version: 0.1.0
-    tags: ai-stacks,aistacks,build,build-aggregator,build-analysis,thoth,osiris,osiris-api
+    tags: ai-stacks,build-aggregator,build-analysis,thoth,osiris,osiris-api
     template.openshift.io/documentation-url: https://github.com/Thoth-Station/
     template.openshift.io/long-description: >
       This is Osiris API BuildConfig Template.
     template.openshift.io/provider-display-name: Red Hat, Inc.
   labels:
     template: osiris-api-buildonfig
-    app: osiris
+    app: thoth
     component: osiris-api
 
 parameters:
@@ -22,29 +22,31 @@ parameters:
     displayName: Git Repository
     required: true
     name: GITHUB_URL
-    value: 'https://github.com/thoth-station/osiris'
+    value: 'https://github.com/harshad16/osiris'
 
   - description: Git reference to be used for Thoth's Osiris API
     displayName: Git Reference
     required: true
     name: GITHUB_REF
-    value: 'master'
+    value: new
 
 objects:
-  - apiVersion: v1
+  - apiVersion: build.openshift.io/v1
     kind: BuildConfig
     metadata:
       creationTimestamp: null
       labels:
-        app: osiris
+        app: thoth
         component: osiris-api
       name: osiris-api
     spec:
       resource:
         requests:
+          cpu: 500m
           memory: 512Mi
         limits:
-          memory: 2Gi
+          cpu: 1000m
+          memory: 768Mi
       output:
         to:
           kind: ImageStreamTag
@@ -67,6 +69,8 @@ objects:
               value: '1'
             - name: UPGRADE_PIP_TO_LATEST
               value: ''
+            - name: WEB_CONCURRENCY
+              value: '4'
       triggers:
         - type: GitHub
           github:

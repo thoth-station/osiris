@@ -1,0 +1,62 @@
+---
+- name: Playbook to provision Thoth's Osiris deployment
+  connection: local
+  gather_facts: false
+  hosts: localhost
+  tags:
+    - openshift
+    - thoth
+    - osiris-api
+    - osiris
+
+  vars:
+    APPLICATION_NAMESPACE: "{{ lookup('env','APPLICATION_NAMESPACE') }}"
+    OCP_TOKEN: "{{ lookup('env','OCP_TOKEN') }}"
+    OCP_URL: "{{ lookup('env','OCP_URL') }}"
+    OSIRIS_API_APP_SECRET_KEY: "{{ lookup('env','OSIRIS_API_APP_SECRET_KEY') }}"
+    SENTRY_DSN: "{{ lookup('env','SENTRY_DSN') }}"
+
+  tasks:
+    - name: Login to OpenShift using provided token
+      changed_when: false
+      command: >
+       oc login {{ OCP_URL }} --insecure-skip-tls-verify=true
+       --token {{ OCP_TOKEN }}
+
+    - name: Make sure to use project {{ APPLICATION_NAMESPACE }}
+      command: oc project {{ APPLICATION_NAMESPACE }}
+      ignore_errors: true
+      register: project_exists
+
+    - name: Importing required centos ImageStreamTags from upstream Registries
+      command: >
+        oc tag --namespace {{ APPLICATION_NAMESPACE }}
+        registry.centos.org/centos/python-36-centos7:latest
+        python-36-centos7:latest
+
+    - name: Create osiris ImageStream
+      shell: >
+        oc process --namespace {{ APPLICATION_NAMESPACE }}
+        --filename=../openshift/imageStream-template.yaml
+        | oc apply --namespace {{ APPLICATION_NAMESPACE }} -f -
+
+    - name: Create osiris BuildConfig
+      shell: >
+        oc process --namespace {{ APPLICATION_NAMESPACE }}
+        --filename=../openshift/buildConfig-template.yaml
+        | oc apply --namespace {{ APPLICATION_NAMESPACE }} -f -
+
+    - name: Create Secret
+      shell: >
+        oc process --namespace {{ APPLICATION_NAMESPACE }}
+        --filename=../openshift/secret-template.yaml
+        -p OSIRIS_API_APP_SECRET_KEY={{ OSIRIS_API_APP_SECRET_KEY |
+        default('start123', true) }}
+        | oc apply --namespace {{ APPLICATION_NAMESPACE }} -f -
+
+
+    - name: Create osiris Deployment
+      shell: >
+        oc process --namespace {{ APPLICATION_NAMESPACE }}
+        --filename ../openshift/deployment-template.yaml
+        | oc apply --namespace {{ APPLICATION_NAMESPACE }} -f -

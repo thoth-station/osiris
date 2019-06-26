@@ -5,16 +5,16 @@ metadata:
   annotations:
     description: >
       This is Osiris API ImageStream Template.
-    openshift.io/display-name: 'Thoth: Osiris API - ImageStream'
+    openshift.io/display-name: Thoth:Osiris API - ImageStream
     version: 0.1.0
-    tags: ai-stacks,aistacks,build,build-aggregator,build-analysis,thoth,osiris,osiris-api
+    tags: ai-stacks,build-aggregator,build-analysis,thoth,osiris,osiris-api
     template.openshift.io/documentation-url: https://github.com/Thoth-Station/
     template.openshift.io/long-description: >
       This is Osiris API ImageStream Template.
     template.openshift.io/provider-display-name: Red Hat, Inc.
   labels:
     template: osiris-api-imagestream
-    app: osiris
+    app: thoth
     component: osiris-api
 
 parameters:
@@ -29,8 +29,10 @@ objects:
     apiVersion: v1
     metadata:
       labels:
-        app: osiris
+        app: thoth
         component: osiris-api
       name: osiris-api
     spec:
       name: ${IMAGE_STREAM_TAG}
+      lookupPolicy:
+        local: true
