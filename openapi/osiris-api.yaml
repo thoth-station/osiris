@@ -1,0 +1,339 @@
+openapi: 3.0.0
+
+info:
+  title: Osiris API
+  version: 0.1.0
+  description: Build log aggregation and analysis.
+  license:
+    name: GPLv3
+
+servers:
+  - url: /api/v1
+
+paths:
+# **** BUILD **** #
+  /build/completed/{build_id}:
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_completed_thoth_resource
+      tags: ["Osiris-build-observer"]
+      summary: Trigger build completion hook
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        description: mode description.
+        name: mode
+        required: false
+        schema:
+          type: string
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+  /build/completed/event_schema/{build_id}:
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_completed_event_resource
+      tags: ["Osiris-build-observer"]
+      summary: Trigger build completion hook
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or missing
+            build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+  /build/completed/build_schema/{build_id}:
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_completed_resource
+      tags: ["Osiris-build-observer"]
+      summary: Trigger build completion hook
+      parameters:
+        - in: path
+          description: Unique build identification.
+          name: build_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+  /build/started/{build_id}:
+    put:
+      tags: ["Osiris-build-observer"]
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_resource
+      summary: Trigger build start hook
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        description: mode description.
+        name: mode
+        required: false
+        schema:
+          type: string
+      responses:
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+
+  /build/started/build_schema/{build_id}:
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_started_resource
+      tags: ["Osiris-build-observer"]
+      summary: Trigger build start hook
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+  /build/started/event_schema/{build_id}:
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_started_event_resource
+      tags: ["Osiris-build-observer"]
+      summary: Trigger build start hook
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+
+  /build/status/{build_id}:
+    get:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: get_build_status_resource
+      tags: ["Osiris-build-observer"]
+      summary: Return status of the given build
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Success
+
+  /build/info/page/{page}:
+    get:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: get_build_info_listing_resource
+      tags: ["Osiris-build-observer"]
+      summary: Paginate build information documents stored in Ceph
+      parameters:
+      - name: page
+        in: path
+        required: false
+        schema:
+          type: integer
+          default: 0
+      responses:
+        200:
+          description: Paginate build information documents.
+
+
+  /build/info/{build_id}:
+    get:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: get_build_info_resource
+      tags: ["Osiris-build-observer"]
+      summary: Return complete information stored about given build
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      - name: X-Fields
+        in: header
+        description: An optional fields mask
+        schema:
+          type: string
+          format: mask
+      responses:
+        200:
+          description: Success
+
+
+  /build/logs/{build_id}:
+    get:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: get_build_log_resource
+      tags: ["Osiris-build-observer"]
+      summary: Return logs stored by the given build
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      - name: X-Fields
+        in: header
+        description: An optional fields mask
+        schema:
+          type: string
+          format: mask
+      responses:
+        200:
+          description: Success
+        400:
+          description: Bad request syntax or unsupported method
+
+    put:
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: put_build_log_resource
+      tags: ["Osiris-build-observer"]
+      summary: Store logs for the given build in Ceph
+      parameters:
+      - in: path
+        description: Unique build identification.
+        name: build_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        description: Overwrite existing logs (default 1).
+        name: force
+        schema:
+          type: string
+      - in: query
+        description: mode description.
+        name: mode
+        required: false
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        400:
+          description: Request could not be processed due to invalid data or
+            missing build identification.
+        202:
+          description: Request has been accepted.Document will be stored in Ceph
+
+
+# **** BUILDLOG **** #
+  /analyse/buildlog:
+    post:
+      tags: ["Buildlog"]
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: post_buildlog
+      summary: Submit Buildlog for Analysis.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                _file_:
+                  type: string
+                  format: binary
+      parameters:
+        - name: output_format
+          in: query
+          required: false
+          description: provide either dict, html, json, plain, records
+          schema:
+            type: string
+            format: string
+        - name: handler
+          in: query
+          required: false
+          description: choose either pip b/w pipenv
+          schema:
+            type: string
+            format: string
+        - name: limit
+          in: query
+          required: false
+          description: limit of the number candidates
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Successful response.
+        202:
+          description: Results are not ready yet.
+        400:
+          description: On invalid request.
+        404:
+          description: The given document does not exist.
+
+
+# **** INFORMATION **** #
+  /info:
+    get:
+      tags: ["Info"]
+      x-openapi-router-controller: thoth.osiris.api_v1
+      operationId: get_info
+      summary: Get some information about this API.
+      responses:
+        200:
+          description: Successful response with information.
