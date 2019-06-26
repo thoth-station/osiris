@@ -4,15 +4,28 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask-restplus = "*"
 marshmallow = "*"
 openshift = "*"
 requests = "*"
 thoth-common = "*"
 thoth-storages = "*"
+prometheus-client = "*"
+prometheus-flask-exporter = "*"
+connexion = {extras = ["swagger-ui"],version = "*"}
+flask = "*"
+gunicorn = "*"
+flask-script = "*"
+opentracing-instrumentation = "*"
+jaeger-client = "*"
+grpcio = "*"
+grpcio-tools = "*"
+grpcio-opentracing = "*"
 
 [dev-packages]
 pytest = "*"
 
 [requires]
 python_version = "3.6"
+
+[pipenv]
+allow_prereleases = false
