@@ -46,7 +46,6 @@ from thoth.osiris.schema.build import BuildInfo, BuildInfoSchema, BuildLogSchema
 from thoth.osiris.schema.build import BuildInfoPagination, BuildInfoPaginationSchema
 
 from thoth.osiris.exceptions import OCError
-from thoth.storages import BuildLogsStore
 
 from thoth.storages.exceptions import NotFoundError
 from werkzeug.exceptions import HTTPException, InternalServerError
@@ -107,10 +106,6 @@ def post_buildlog(
     )
     build_doc["build_log"] = build_log
     build_aggregator.store_build_data(build_doc)
-    # # store in Ceph
-    # # adapter = BuildLogsStore()
-    # # adapter.connect()
-    # # document_id = adapter.store_document(parameters)
     THOTH_BUILD_ANALYSER_OUTPUT = output_format
     response, status = schedule(parameters, THOTH_BUILD_ANALYSER_OUTPUT)
 

@@ -8,7 +8,7 @@ BASE_DIR = os.path.dirname(__file__)
 # When executing the setup.py, we need to be able to import ourselves, this
 # means that we need to add the src/ directory to the sys.path.
 ABOUT = dict()
-with open(os.path.join(BASE_DIR, 'osiris', '__about__.py')) as f:
+with open(os.path.join(BASE_DIR, 'thoth', 'osiris', '__about__.py')) as f:
     exec(f.read(), ABOUT)
 
 with open('requirements.txt') as f:
